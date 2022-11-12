@@ -3,7 +3,7 @@ from lex import VoxLexer
 
 
 class VoxParser(Parser):
-    debugfile = 'debug_out'
+    debugfile = 'parser.debug'
     tokens = VoxLexer.tokens
 
     @_('varDecl funDecl fStatement')
