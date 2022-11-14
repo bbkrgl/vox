@@ -186,7 +186,7 @@ class VoxParser(Parser):
     def lfact(self, p):
         pass
 
-    @_('BCALL call')
+    @_('"#" call')
     def lfact(self, p):
         pass
 
@@ -194,11 +194,11 @@ class VoxParser(Parser):
     def lfact(self, p):
         pass
 
-    @_('BCALL ID')
+    @_('"#" ID')
     def lfact(self, p):
         pass
 
-    @_('BCALL ID "[" aexpr "]"')
+    @_('"#" ID "[" aexpr "]"')
     def lfact(self, p):
         pass
 

@@ -2,17 +2,13 @@ from sly import Lexer
 
 
 class VoxLexer(Lexer):
-    tokens = {
-        VAR, ID, FUN,
-        IF, ELSE, WHILE, FOR,
-        OR, AND, TRUE, FALSE,
-        PLUS, MINUS, MULT, DIV,
-        EQ, NEQ, NOT, GT, GE, LT, LE, BCALL,
-        ASSIGN, PRINT, RETURN,
-        NUMBER, STRING,
-    }
+    tokens = { NUMBER, ID, WHILE, IF, ELSE, PRINT,
+               PLUS, MINUS, TIMES, DIVIDE, ASSIGN,
+               EQ, LT, LE, GT, GE, NE, AND,
+               FALSE, TRUE, FUN, FOR, OR,
+               RETURN, VAR, STRING, NOT}
 
-    literals = {';', ',', '(', ')', '[', ']', '{', '}'}
+    literals = {'(', ')', '{', '}', '[', ']', ';', ',', '#'}
 
     ignore = ' \t'
     ignore_comment = '//'
@@ -33,18 +29,17 @@ class VoxLexer(Lexer):
 
     PLUS = r'\+'
     MINUS = r'-'
-    MULT = r'\*'
-    DIV = r'/'
+    TIMES = r'\*'
+    DIVIDE = r'/'
 
     EQ = r'=='
-    NEQ = r'!='
+    NE = r'!='
     NOT = r'!'
 
     GT = r'>'
     GE = r'>='
     LT = r'<'
     LE = r'<='
-    BCALL = r'\#'
 
     ASSIGN = r'='
     PRINT = r'print'
