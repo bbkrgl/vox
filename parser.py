@@ -7,21 +7,50 @@ class Parser(Parser):
     debugfile = "parser.debug"
     tokens = Lexer.tokens
 
+    """
+    Program syntax
+    """
+
     @_("varDecl funDecl fStatement")
     def program(self, p):
         return Program(p.varDecl, p.funDecl, p.fStatement)
 
+    """
+    Global Variable Declarations
+    """
+
     @_('VAR ID ";" varDecl')
     def varDecl(self, p):
-        return [VarDecl(p.ID, None)] + p.varDecl
+        id = Identifier(p.ID, p.lineno, p.index)
+        return [VarDecl(id, None)] + p.varDecl
 
     @_('VAR ID ASSIGN init ";" varDecl')
     def varDecl(self, p):
-        return [VarDecl(p.ID, p.init)] + p.varDecl
+        id = Identifier(p.ID, p.lineno, p.index)
+        return [VarDecl(id, p.init)] + p.varDecl
 
     @_("empty")
     def varDecl(self, p):
         return []
+
+    @_('VAR error ";" varDecl', 'VAR error ASSIGN init ";" varDecl')
+    def varDecl(self, p):
+        print("Syntax Error: Invalid variable identifier; at line", p.lineno)
+        return [ErrorDecl()] + p.varDecl
+
+    @_('VAR ID ASSIGN error ";" varDecl')
+    def varDecl(self, p):
+        print(
+            "Syntax Error: Invalid initialization for variable",
+            p.ID,
+            "; at line",
+            p.lineno,
+        )
+        return [ErrorDecl()] + p.varDecl
+
+    """
+    Global Function Declarations
+    """
 
     @_("FUN function funDecl")
     def funDecl(self, p):
@@ -30,6 +59,15 @@ class Parser(Parser):
     @_("empty")
     def funDecl(self, p):
         return []
+
+    @_("FUN error funDecl")
+    def funDecl(self, p):
+        print("Syntax Error: Invalid function definition; at line", p.lineno)
+        return [ErrorDecl()] + p.funDecl
+
+    """
+    Free Statements
+    """
 
     @_('simpleStmt ";"')
     def free_statement(self, p):
@@ -47,6 +85,10 @@ class Parser(Parser):
     def fStatement(self, p):
         return []
 
+    """
+    Initialization
+    """
+
     @_("expr")
     def init(self, p):
         return p.expr
@@ -62,6 +104,27 @@ class Parser(Parser):
     @_("empty")
     def subarrinit(self, p):
         return []
+
+    @_('"[" error subarrinit "]"')
+    def init(self, p):
+        print(
+            "Syntax Error: Invalid expression at array initialization; at line",
+            p.lineno,
+            "character",
+            p.index,
+        )
+        return ErrorStmt()
+
+    @_('"," error subarrinit')
+    def subarrinit(self, p):
+        print(
+            "Syntax Error: Invalid expression; at line", p.lineno, "character", p.index
+        )
+        return ErrorStmt()
+
+    """
+    Simple-Compound Statements
+    """
 
     @_("asgnStmt")
     def simpleStmt(self, p):
@@ -87,6 +150,10 @@ class Parser(Parser):
     def compoundStmt(self, p):
         return p.forStmt
 
+    """
+    Statements
+    """
+
     @_("free_statement")
     def statement(self, p):
         return p.free_statement
@@ -95,21 +162,73 @@ class Parser(Parser):
     def statement(self, p):
         return p.block
 
+    """
+    Assignment Statements
+    """
+
     @_("ID ASSIGN expr")
     def asgnStmt(self, p):
-        return Assign(p.ID, p.expr)
+        id = Identifier(p.ID, p.lineno, p.index)
+        return Assign(id, p.expr)
 
     @_('ID "[" aexpr "]" ASSIGN expr')
     def asgnStmt(self, p):
-        return SetVector(p.ID, p.aexpr, p.expr)
+        id = Identifier(p.ID, p.lineno, p.index)
+        return SetVector(id, p.aexpr, p.expr)
+
+    @_("error ASSIGN expr", 'error "[" aexpr "]" ASSIGN expr')
+    def asgnStmt(self, p):
+        print("Syntax Error: Invalid variable identifier; at line", p.lineno)
+        return ErrorStmt()
+
+    @_("ID ASSIGN error", 'ID "[" aexpr "]" ASSIGN error')
+    def asgnStmt(self, p):
+        print(
+            "Syntax Error: Invalid assignment for identifier",
+            p.ID + ", bad right hand-side; at line",
+            p.lineno,
+        )
+        return ErrorStmt()
+
+    @_('ID "[" error "]" ASSIGN expr')
+    def asgnStmt(self, p):
+        print(
+            "Syntax Error: Bad array subscript expression for identifier",
+            p.ID,
+            "at assignment; at line",
+            p.lineno,
+        )
+        return ErrorStmt()
+
+    """
+    Print Statement
+    """
 
     @_("PRINT expr")
     def printStmt(self, p):
         return Print(p.expr)
 
+    @_("PRINT error")
+    def printStmt(self, p):
+        print("Syntax Error: Bad expression at print statement; at line", p.lineno)
+        return ErrorStmt()
+
+    """
+    Return Statement
+    """
+
     @_("RETURN expr")
     def returnStmt(self, p):
         return Return(p.expr)
+
+    @_("RETURN error")
+    def returnStmt(self, p):
+        print("Syntax Error: Bad expression at return statement; at line", p.lineno)
+        return ErrorStmt()
+
+    """
+    If Statement
+    """
 
     @_("IF lexpr statement")
     def ifStmt(self, p):
@@ -119,13 +238,37 @@ class Parser(Parser):
     def ifStmt(self, p):
         return IfElse(p.lexpr, p.statement0, p.statement1)
 
+    @_("IF error statement", "IF error statement ELSE statement")
+    def ifStmt(self, p):
+        print(
+            "Syntax Error: Invalid logical expression at if statement; at line",
+            p.lineno,
+        )
+        return ErrorStmt()
+
+    """
+    While Statement
+    """
+
     @_("WHILE lexpr statement")
     def whileStmt(self, p):
         return WhileLoop(p.lexpr, p.statement)
 
+    @_("WHILE error statement")
+    def whileStmt(self, p):
+        print(
+            "Syntax Error: Invalid logical expression at while statement; at line",
+            p.lineno,
+        )
+        return ErrorStmt()
+
+    """
+    For Statement
+    """
+
     @_('FOR "(" forAsgn ";" forLexpr ";" forAsgn ")" statement')
     def forStmt(self, p):
-        return ForLoop(p.forAsgn, p.forLexpr, p.forAsgn, p.statement)
+        return ForLoop(p.forAsgn0, p.forLexpr, p.forAsgn1, p.statement)
 
     @_("asgnStmt")
     def forAsgn(self, p):
@@ -143,6 +286,46 @@ class Parser(Parser):
     def forLexpr(self, p):
         return None
 
+    @_('FOR "(" error ")" statement')
+    def forStmt(self, p):
+        print(
+            "Syntax Error: Ill formed for statement; at line",
+            p.lineno,
+        )
+        return ErrorStmt()
+
+    @_('FOR "(" error ";" forLexpr ";" forAsgn ")" statement')
+    def forStmt(self, p):
+        print(
+            "Syntax Error: Bad expression at for statement; at line",
+            p.lineno,
+            "character",
+            p.index,
+        )
+        return ErrorStmt()
+
+    @_('FOR "(" forAsgn ";" error ";" forAsgn ")" statement')
+    def forStmt(self, p):
+        print(
+            "Syntax Error: Invalid logical expression at for statement; at line",
+            p.lineno,
+        )
+        return ErrorStmt()
+
+    @_('FOR "(" forAsgn ";" forLexpr ";" error ")" statement')
+    def forStmt(self, p):
+        print(
+            "Syntax Error: Bad expression at for statement; at line",
+            p.lineno,
+            "character",
+            p.index,
+        )
+        return ErrorStmt()
+
+    """
+    Block
+    """
+
     @_('"{" varDecl blockStmt "}"')
     def block(self, p):
         return Block(p.varDecl, p.blockStmt)
@@ -154,6 +337,10 @@ class Parser(Parser):
     @_("empty")
     def blockStmt(self, p):
         return []
+
+    """
+    Expressions
+    """
 
     @_("lexpr")
     def expr(self, p):
@@ -197,11 +384,13 @@ class Parser(Parser):
 
     @_('"#" ID')
     def lfact(self, p):
-        return LPrimary(p.ID)
+        id = Identifier(p.ID, p.lineno, p.index)
+        return LPrimary(Variable(id))
 
     @_('"#" ID "[" aexpr "]"')
     def lfact(self, p):
-        return LPrimary(GetVector(p.ID, p.aexpr))
+        id = Identifier(p.ID, p.lineno, p.index)
+        return LPrimary(GetVector(id, p.aexpr))
 
     @_("NOT lfact")
     def lfact(self, p):
@@ -249,7 +438,7 @@ class Parser(Parser):
 
     @_("NUMBER")
     def fact(self, p):
-        return p.NUMBER
+        return ALiteral(p.NUMBER)
 
     @_('"(" aexpr ")"')
     def fact(self, p):
@@ -257,15 +446,17 @@ class Parser(Parser):
 
     @_("ID")
     def fact(self, p):
-        return p.ID
+        id = Identifier(p.ID, p.lineno, p.index)
+        return Variable(id)
 
     @_('ID "[" aexpr "]"')
     def fact(self, p):
-        return GetVector(p.ID, p.aexpr)
+        id = Identifier(p.ID, p.lineno, p.index)
+        return GetVector(id, p.aexpr)
 
     @_("aexpr NE aexpr")
     def cexpr(self, p):
-        return Comparison("!=", p.aexpr, p.aexpr)
+        return Comparison("!=", p.aexpr0, p.aexpr1)
 
     @_("aexpr EQ aexpr")
     def cexpr(self, p):
@@ -273,19 +464,19 @@ class Parser(Parser):
 
     @_("aexpr GT aexpr")
     def cexpr(self, p):
-        return Comparison(">", p.aexpr, p.aexpr)
+        return Comparison(">", p.aexpr0, p.aexpr1)
 
     @_("aexpr GE aexpr")
     def cexpr(self, p):
-        return Comparison(">=", p.aexpr, p.aexpr)
+        return Comparison(">=", p.aexpr0, p.aexpr1)
 
     @_("aexpr LE aexpr")
     def cexpr(self, p):
-        return Comparison("<=", p.aexpr, p.aexpr)
+        return Comparison("<=", p.aexpr0, p.aexpr1)
 
     @_("aexpr LT aexpr")
     def cexpr(self, p):
-        return Comparison("<", p.aexpr, p.aexpr)
+        return Comparison("<", p.aexpr0, p.aexpr1)
 
     @_("STRING")
     def sexpr(self, p):
@@ -307,17 +498,24 @@ class Parser(Parser):
     def arguments(self, p):
         return []
 
+    """
+    Function Definition
+    """
+
     @_('ID "(" parameters ")" block')
     def function(self, p):
-        return FunDecl(p.ID, p.parameters, p.block)
+        id = Identifier(p.ID, p.lineno, p.index)
+        return FunDecl(id, p.parameters, p.block)
 
     @_("ID subparameters")
     def parameters(self, p):
-        return [p.ID] + p.subparameters
+        id = Identifier(p.ID, p.lineno, p.index)
+        return [id] + p.subparameters
 
     @_('"," ID subparameters')
     def subparameters(self, p):
-        return [p.ID] + p.subparameters
+        id = Identifier(p.ID, p.lineno, p.index)
+        return [id] + p.subparameters
 
     @_("empty")
     def subparameters(self, p):
@@ -329,8 +527,18 @@ class Parser(Parser):
 
     @_('ID "(" arguments ")"')
     def call(self, p):
-        return Call(p.ID, p.arguments)
+        id = Identifier(p.ID, p.lineno, p.index)
+        return Call(id, p.arguments)
 
     @_("")
     def empty(self, p):
         pass
+
+"""
+    def error(self, tok):
+        while True:
+            tok = next(self.tokens, None)
+            if not tok or tok.type == ";" or tok.type == "}":
+                break
+            self.errok()
+"""

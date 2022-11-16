@@ -16,19 +16,23 @@ class Lexer(Lexer):
     ignore = ' \t'
     ignore_comment = '//'
     ignore_newline = '\n+'
+    
+    ID = r'[a-zA-Z_][a-zA-Z0-9_]*'
+    NUMBER = r'([0-9]*[.])?[0-9]+'
+    STRING = r'"(?:[^"\\]|\\.)*"'
 
-    VAR = r'var'
-    FUN = r'fun'
+    ID['var'] = VAR
+    ID['fun'] = FUN
 
-    IF = r'if'
-    ELSE = r'else'
-    WHILE = r'while'
-    FOR = r'for'
+    ID['if'] = IF
+    ID['else'] = ELSE
+    ID['while'] = WHILE
+    ID['for'] = FOR
 
-    OR = r'or'
-    AND = r'and'
-    TRUE = r'true'
-    FALSE = r'false'
+    ID['or'] = OR
+    ID['and'] = AND
+    ID['true'] = TRUE
+    ID['false'] = FALSE
 
     PLUS = r'\+'
     MINUS = r'-'
@@ -37,20 +41,15 @@ class Lexer(Lexer):
 
     EQ = r'=='
     NE = r'!='
+    GE = r'>='
+    LE = r'<='
+    GT = r'>'
+    LT = r'<'
     NOT = r'!'
 
-    GT = r'>'
-    GE = r'>='
-    LT = r'<'
-    LE = r'<='
-
     ASSIGN = r'='
-    PRINT = r'print'
-    RETURN = r'return'
-
-    ID = r'[a-zA-Z_][a-zA-Z0-9_]*'
-    NUMBER = r'([0-9]*[.])?[0-9]+'
-    STRING = r'"[\s\S]*"'
+    ID['print'] = PRINT
+    ID['return'] = RETURN
 
     @_(r'\n+')
     def ignore_newline(self, t):
@@ -62,10 +61,6 @@ class Lexer(Lexer):
 
     def STRING(self, t):
         t.value = t.value[1:-1]
-        return t
-
-    def ID(self, t):
-        t.value = Identifier(t.value, self.lineno, self.index - 1)
         return t
 
     def error(self, t):
