@@ -3,188 +3,248 @@ from dataclasses import dataclass
 from abc import ABC, abstractmethod
 from typing import List, Union
 
+
 @dataclass(frozen=True)
 class ASTNode:
     pass
 
+
 @dataclass(frozen=True)
 class Expr(ASTNode):
-    '''expressions. some of the the parse tree components are not explicitly represented (such as parantheses to increase precedence)'''
+    """expressions. some of the the parse tree components are not explicitly represented (such as parantheses to increase precedence)"""
+
     pass
+
 
 @dataclass(frozen=True)
 class LExpr(Expr):
-    '''logical expressions. conditions of if/while/for stmts, operands of logical operators, and primaries prepended with # are members.'''
+    """logical expressions. conditions of if/while/for stmts, operands of logical operators, and primaries prepended with # are members."""
+
     pass
+
 
 @dataclass(frozen=True)
 class AExpr(Expr):
-    '''arithmetic expressions.'''
+    """arithmetic expressions."""
+
     pass
+
 
 @dataclass(frozen=True)
 class SLiteral(Expr):
-    '''string literal. the grammar makes them unusable in arithmetic/logical ops when they are expressed as naked string literals.'''
-    value: str 
+    """string literal. the grammar makes them unusable in arithmetic/logical ops when they are expressed as naked string literals."""
+
+    value: str
+
 
 @dataclass(frozen=True)
 class Stmt(ASTNode):
-    '''statements. middle classes of statements (simpleStmt/free-statement etc.) are not explicitly represented.'''
+    """statements. middle classes of statements (simpleStmt/free-statement etc.) are not explicitly represented."""
+
     pass
+
 
 @dataclass(frozen=True)
 class ErrorStmt(Stmt):
-    '''this node should correspond to an error during parsing that is resolved with character re-synchronization.'''
+    """this node should correspond to an error during parsing that is resolved with character re-synchronization."""
+
     pass
+
 
 @dataclass(frozen=True)
 class Decl(ASTNode):
-    '''declarations.'''
+    """declarations."""
+
     pass
+
 
 @dataclass(frozen=True)
 class Identifier:
-    '''represents an identifier token. lineno and index fields are added to help with error reporting.'''
+    """represents an identifier token. lineno and index fields are added to help with error reporting."""
+
     name: str
     lineno: int
     index: int
 
+
 @dataclass(frozen=True)
 class VarDecl(Decl):
-    '''variable declaration. the initilializer attribute is None if the variable is not initialized to any value,
-    it is a list if the variable is initialized as a vector, and and Expr if it is initialized as a non-vector.'''
+    """variable declaration. the initilializer attribute is None if the variable is not initialized to any value,
+    it is a list if the variable is initialized as a vector, and and Expr if it is initialized as a non-vector."""
+
     identifier: Identifier
     initializer: Union[Expr, List[Expr], None]
 
+
 @dataclass(frozen=True)
 class FunDecl(Decl):
-    '''function declaration. as in fun identifier(params...) body'''
+    """function declaration. as in fun identifier(params...) body"""
+
     identifier: Identifier
     params: List[Identifier]
     body: Block
 
+
 @dataclass(frozen=True)
 class Program(ASTNode):
-    '''the root node of the AST.'''
+    """the root node of the AST."""
+
     var_decls: List[VarDecl]
     fun_decls: List[FunDecl]
     statements: List[Stmt]
 
+
 @dataclass(frozen=True)
 class Assign(Stmt):
-    '''assignments to a variable in the form identifier = expr'''
+    """assignments to a variable in the form identifier = expr"""
+
     identifier: Identifier
     expr: Expr
 
+
 @dataclass(frozen=True)
 class SetVector(Stmt):
-    '''assignments to a member of vector in the form identifier[vector_index] = expr'''
+    """assignments to a member of vector in the form identifier[vector_index] = expr"""
+
     identifier: Identifier
     vector_index: AExpr
     expr: Expr
 
+
 @dataclass(frozen=True)
 class ForLoop(Stmt):
-    '''a for loop. If any of the fields are left empty, such as in for(;;){}, set them as None.'''
+    """a for loop. If any of the fields are left empty, such as in for(;;){}, set them as None."""
+
     initializer: Union[Assign, None]
     condition: Union[LExpr, None]
     increment: Union[Assign, None]
     body: Stmt
 
+
 @dataclass(frozen=True)
 class Return(Stmt):
     expr: Expr
+
 
 @dataclass(frozen=True)
 class WhileLoop(Stmt):
     condition: LExpr
     body: Stmt
 
+
 @dataclass(frozen=True)
 class Block(Stmt):
     var_decls: List[VarDecl]
     statements: List[Stmt]
 
+
 @dataclass(frozen=True)
 class Print(Stmt):
     expr: Expr
 
+
 @dataclass(frozen=True)
 class IfElse(Stmt):
-    '''an if-else statement. If there is no else corresponding to this if, set else_branch as None.'''
+    """an if-else statement. If there is no else corresponding to this if, set else_branch as None."""
+
     condition: LExpr
     if_branch: Stmt
     else_branch: Union[Stmt, None]
 
+
 @dataclass(frozen=True)
 class LBinary(LExpr):
-    '''logical binary operations and and or. Set op as "and"/"or".'''
+    """logical binary operations and and or. Set op as "and"/"or"."""
+
     op: str
     left: LExpr
     right: LExpr
 
+
 @dataclass(frozen=True)
 class Comparison(LExpr):
-    '''comparison operations <,>,==,!=,<=,>=. Set op as "<"/">"/"=="/"!="/"<="/">=".'''
+    """comparison operations <,>,==,!=,<=,>=. Set op as "<"/">"/"=="/"!="/"<="/">="."""
+
     op: str
     left: AExpr
     right: AExpr
 
+
 @dataclass(frozen=True)
 class LLiteral(LExpr):
-    '''logical literals (TRUE/FALSE tokens).'''
+    """logical literals (TRUE/FALSE tokens)."""
+
     value: bool
+
 
 @dataclass(frozen=True)
 class LPrimary(LExpr):
-    '''# operator on primaries: function calls(# fizzbuzz()), vector accesses(# foo[0]) or variables (# bar) to cast them explicitly as logical.'''
+    """# operator on primaries: function calls(# fizzbuzz()), vector accesses(# foo[0]) or variables (# bar) to cast them explicitly as logical."""
+
     primary: Union[Call, GetVector, Variable]
+
 
 @dataclass(frozen=True)
 class GetVector(AExpr):
-    '''vector access as an expression, as in foo = identifier[vector_index]'''
+    """vector access as an expression, as in foo = identifier[vector_index]"""
+
     identifier: Identifier
     vector_index: AExpr
 
+
 @dataclass(frozen=True)
 class Variable(AExpr):
-    '''variable access as an expression, as in foo = identifier'''
+    """variable access as an expression, as in foo = identifier"""
+
     identifier: Identifier
+
 
 @dataclass(frozen=True)
 class LNot(LExpr):
-    '''! operation.'''
+    """! operation."""
+
     right: LExpr
+
 
 @dataclass(frozen=True)
 class ABinary(AExpr):
     '''arithmetic binary operations +,-,* or /. Set op as "+"/"-"/"*" or "/"'''
+
     op: str
     left: AExpr
     right: AExpr
 
+
 @dataclass(frozen=True)
 class AUMinus(AExpr):
-    '''unary minus operation'''
+    """unary minus operation"""
+
     right: AExpr
+
 
 @dataclass(frozen=True)
 class ALiteral(AExpr):
-    '''arithmetic literals (Number)'''
+    """arithmetic literals (Number)"""
+
     value: float
+
 
 @dataclass(frozen=True)
 class Call(AExpr):
-    '''function call as an expression, as in foo = callee(arguments...)'''
+    """function call as an expression, as in foo = callee(arguments...)"""
+
     callee: Identifier
     arguments: List[Expr]
 
-#https://stackoverflow.com/questions/11154668/is-the-visitor-pattern-useful-for-dynamically-typed-languages
+
+# https://stackoverflow.com/questions/11154668/is-the-visitor-pattern-useful-for-dynamically-typed-languages
+
+
 class ASTNodeVisitor(ABC):
     def __init__(self):
         self.ASTNodes = {
             SLiteral: self.visit_SLiteral,
-            Program : self.visit_Program,
+            Program: self.visit_Program,
             ErrorStmt: self.visit_ErrorStmt,
             VarDecl: self.visit_VarDecl,
             FunDecl: self.visit_FunDecl,
@@ -206,7 +266,7 @@ class ASTNodeVisitor(ABC):
             ABinary: self.visit_ABinary,
             AUMinus: self.visit_AUMinus,
             ALiteral: self.visit_ALiteral,
-            Call: self.visit_Call
+            Call: self.visit_Call,
         }
 
     def visit(self, ast_node: ASTNode):
@@ -308,23 +368,28 @@ class ASTNodeVisitor(ABC):
     def visit_Call(self, calll: Call):
         pass
 
+
 class PrintVisitor(ASTNodeVisitor):
     def indent(self, strr):
-        return '\n'.join(['    '+elem for elem in strr.split('\n')])
+        return "\n".join(["    " + elem for elem in strr.split("\n")])
 
     def visit_SLiteral(self, sliteral: SLiteral):
         return f'"{sliteral.value}"'
 
     def visit_Program(self, program: Program):
-        return '\n'.join(["TOP_LVL VAR_DECLS:",
-                '\n'.join([self.visit(elem) for elem in program.var_decls]),
+        return "\n".join(
+            [
+                "TOP_LVL VAR_DECLS:",
+                "\n".join([self.visit(elem) for elem in program.var_decls]),
                 "TOP_LVL FUN_DECLS:",
-                '\n'.join([self.visit(elem) for elem in program.fun_decls]),
+                "\n".join([self.visit(elem) for elem in program.fun_decls]),
                 "TOP_LVL STMTS:",
-                '\n'.join([self.visit(elem) for elem in program.statements])])
+                "\n".join([self.visit(elem) for elem in program.statements]),
+            ]
+        )
 
     def visit_ErrorStmt(self, errorstmt: ErrorStmt):
-        return 'ERROR_STMT;'
+        return "ERROR_STMT;"
 
     def visit_VarDecl(self, vardecl: VarDecl):
         if vardecl.initializer is None:
@@ -344,9 +409,13 @@ class PrintVisitor(ASTNodeVisitor):
         return f"{setvector.identifier.name}[{self.visit(setvector.vector_index)}] = {self.visit(setvector.expr)};"
 
     def visit_ForLoop(self, forloop: ForLoop):
-        initializer = '' if forloop.initializer is None else self.visit(forloop.initializer)[:-1]
-        condition = '' if forloop.condition is None else self.visit(forloop.condition)
-        increment = '' if forloop.increment is None else self.visit(forloop.increment)[:-1]
+        initializer = (
+            "" if forloop.initializer is None else self.visit(forloop.initializer)[:-1]
+        )
+        condition = "" if forloop.condition is None else self.visit(forloop.condition)
+        increment = (
+            "" if forloop.increment is None else self.visit(forloop.increment)[:-1]
+        )
         return f"for ({initializer};{condition};{increment}) {self.visit(forloop.body)}"
 
     def visit_Return(self, returnn: Return):
@@ -356,18 +425,26 @@ class PrintVisitor(ASTNodeVisitor):
         return f"while {self.visit(whileloop.condition)} {self.visit(whileloop.body)}"
 
     def visit_Block(self, block: Block):
-        return '\n'.join(['{',
-                '  VAR_DECLS:',
-                '\n'.join(["    "+self.visit(elem) for elem in block.var_decls]),
-                '  STMTS:',
-                '\n'.join([self.indent(self.visit(elem)) for elem in block.statements]),
-                '}'])
+        return "\n".join(
+            [
+                "{",
+                "  VAR_DECLS:",
+                "\n".join(["    " + self.visit(elem) for elem in block.var_decls]),
+                "  STMTS:",
+                "\n".join([self.indent(self.visit(elem)) for elem in block.statements]),
+                "}",
+            ]
+        )
 
     def visit_Print(self, printt: Print):
         return f"print {self.visit(printt.expr)};"
 
     def visit_IfElse(self, ifelse: IfElse):
-        else_branch = '' if ifelse.else_branch is None else f" else {self.visit(ifelse.else_branch)}"
+        else_branch = (
+            ""
+            if ifelse.else_branch is None
+            else f" else {self.visit(ifelse.else_branch)}"
+        )
         return f"if {self.visit(ifelse.condition)} {self.visit(ifelse.if_branch)}{else_branch} endif"
 
     def visit_LBinary(self, lbinary: LBinary):

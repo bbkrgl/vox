@@ -1,335 +1,336 @@
 from sly import Parser
-from lex import VoxLexer
+from lexer import Lexer
+from ast_tools import *
 
 
-class VoxParser(Parser):
-    debugfile = 'parser.debug'
-    tokens = VoxLexer.tokens
+class Parser(Parser):
+    debugfile = "parser.debug"
+    tokens = Lexer.tokens
 
-    @_('varDecl funDecl fStatement')
+    @_("varDecl funDecl fStatement")
     def program(self, p):
-        return p.varDecl
+        return Program(p.varDecl, p.funDecl, p.fStatement)
 
     @_('VAR ID ";" varDecl')
     def varDecl(self, p):
-        return p.ID
+        return [VarDecl(p.ID, None)] + p.varDecl
 
     @_('VAR ID ASSIGN init ";" varDecl')
     def varDecl(self, p):
-        return p.ID
+        return [VarDecl(p.ID, p.init)] + p.varDecl
 
-    @_('empty')
+    @_("empty")
     def varDecl(self, p):
-        pass
+        return []
 
-    @_('FUN function')
+    @_("FUN function funDecl")
     def funDecl(self, p):
-        return p.FUN
+        return [p.function] + p.funDecl
 
-    @_('empty')
+    @_("empty")
     def funDecl(self, p):
-        pass
+        return []
 
     @_('simpleStmt ";"')
     def free_statement(self, p):
-        pass
+        return p.simpleStmt
 
-    @_('compoundStmt')
+    @_("compoundStmt")
     def free_statement(self, p):
-        pass
+        return p.compoundStmt
 
-    @_('free_statement')
+    @_("free_statement fStatement")
     def fStatement(self, p):
-        pass
+        return [p.free_statement] + p.fStatement
 
-    @_('empty')
+    @_("empty")
     def fStatement(self, p):
-        pass
+        return []
 
-    @_('expr')
+    @_("expr")
     def init(self, p):
-        pass
+        return p.expr
 
     @_('"[" expr subarrinit "]"')
     def init(self, p):
-        pass
+        return [p.expr] + p.subarrinit
 
     @_('"," expr subarrinit')
     def subarrinit(self, p):
-        pass
+        return [p.expr] + p.subarrinit
 
-    @_('empty')
+    @_("empty")
     def subarrinit(self, p):
-        pass
+        return []
 
-    @_('asgnStmt')
+    @_("asgnStmt")
     def simpleStmt(self, p):
-        pass
+        return p.asgnStmt
 
-    @_('printStmt')
+    @_("printStmt")
     def simpleStmt(self, p):
-        pass
+        return p.printStmt
 
-    @_('returnStmt')
+    @_("returnStmt")
     def simpleStmt(self, p):
-        pass
+        return p.returnStmt
 
-    @_('ifStmt')
+    @_("ifStmt")
     def compoundStmt(self, p):
-        pass
+        return p.ifStmt
 
-    @_('whileStmt')
+    @_("whileStmt")
     def compoundStmt(self, p):
-        pass
+        return p.whileStmt
 
-    @_('forStmt')
+    @_("forStmt")
     def compoundStmt(self, p):
-        pass
+        return p.forStmt
 
-    @_('free_statement')
+    @_("free_statement")
     def statement(self, p):
-        pass
+        return p.free_statement
 
-    @_('block')
+    @_("block")
     def statement(self, p):
-        pass
+        return p.block
 
-    @_('ID ASSIGN expr')
+    @_("ID ASSIGN expr")
     def asgnStmt(self, p):
-        pass
+        return Assign(p.ID, p.expr)
 
     @_('ID "[" aexpr "]" ASSIGN expr')
     def asgnStmt(self, p):
-        pass
+        return SetVector(p.ID, p.aexpr, p.expr)
 
-    @_('PRINT expr')
+    @_("PRINT expr")
     def printStmt(self, p):
-        pass
+        return Print(p.expr)
 
-    @_('RETURN expr')
+    @_("RETURN expr")
     def returnStmt(self, p):
-        pass
+        return Return(p.expr)
 
-    @_('IF lexpr statement')
+    @_("IF lexpr statement")
     def ifStmt(self, p):
-        pass
+        return IfElse(p.lexpr, p.statement, None)
 
-    @_('IF lexpr statement ELSE statement')
+    @_("IF lexpr statement ELSE statement")
     def ifStmt(self, p):
-        pass
+        return IfElse(p.lexpr, p.statement0, p.statement1)
 
-    @_('WHILE lexpr statement')
+    @_("WHILE lexpr statement")
     def whileStmt(self, p):
-        pass
+        return WhileLoop(p.lexpr, p.statement)
 
     @_('FOR "(" forAsgn ";" forLexpr ";" forAsgn ")" statement')
     def forStmt(self, p):
-        pass
+        return ForLoop(p.forAsgn, p.forLexpr, p.forAsgn, p.statement)
 
-    @_('asgnStmt')
+    @_("asgnStmt")
     def forAsgn(self, p):
-        pass
+        return p.asgnStmt
 
-    @_('empty')
+    @_("empty")
     def forAsgn(self, p):
-        pass
+        return None
 
-    @_('lexpr')
+    @_("lexpr")
     def forLexpr(self, p):
-        pass
+        return p.lexpr
 
-    @_('empty')
+    @_("empty")
     def forLexpr(self, p):
-        pass
+        return None
 
     @_('"{" varDecl blockStmt "}"')
     def block(self, p):
-        pass
+        return Block(p.varDecl, p.blockStmt)
 
-    @_('statement blockStmt')
+    @_("statement blockStmt")
     def blockStmt(self, p):
-        pass
+        return [p.statement] + p.blockStmt
 
-    @_('empty')
+    @_("empty")
     def blockStmt(self, p):
-        pass
+        return []
 
-    @_('lexpr')
+    @_("lexpr")
     def expr(self, p):
-        pass
+        return p.lexpr
 
-    @_('aexpr')
+    @_("aexpr")
     def expr(self, p):
-        pass
+        return p.aexpr
 
-    @_('sexpr')
+    @_("sexpr")
     def expr(self, p):
-        pass
+        return p.sexpr
 
-    @_('lexpr OR lterm')
+    @_("lexpr OR lterm")
     def lexpr(self, p):
-        pass
+        return LBinary("or", p.lexpr, p.lterm)
 
-    @_('lterm')
+    @_("lterm")
     def lexpr(self, p):
-        pass
+        return p.lterm
 
-    @_('lterm AND lfact')
+    @_("lterm AND lfact")
     def lterm(self, p):
-        pass
+        return LBinary("and", p.lterm, p.lfact)
 
-    @_('lfact')
+    @_("lfact")
     def lterm(self, p):
-        pass
+        return p.lfact
 
-    @_('cexpr')
+    @_("cexpr")
     def lfact(self, p):
-        pass
+        return p.cexpr
 
     @_('"#" call')
     def lfact(self, p):
-        pass
+        return LPrimary(p.call)
 
     @_('"(" lexpr ")"')
     def lfact(self, p):
-        pass
+        return p.lexpr
 
     @_('"#" ID')
     def lfact(self, p):
-        pass
+        return LPrimary(p.ID)
 
     @_('"#" ID "[" aexpr "]"')
     def lfact(self, p):
-        pass
+        return LPrimary(GetVector(p.ID, p.aexpr))
 
-    @_('NOT lfact')
+    @_("NOT lfact")
     def lfact(self, p):
-        pass
+        return LNot(p.lfact)
 
-    @_('TRUE')
+    @_("TRUE")
     def lfact(self, p):
-        pass
+        return LLiteral(p.TRUE)
 
-    @_('FALSE')
+    @_("FALSE")
     def lfact(self, p):
-        pass
+        return LLiteral(p.FALSE)
 
-    @_('aexpr PLUS term')
+    @_("aexpr PLUS term")
     def aexpr(self, p):
-        pass
+        return ABinary("+", p.aexpr, p.term)
 
-    @_('aexpr MINUS term')
+    @_("aexpr MINUS term")
     def aexpr(self, p):
-        pass
+        return ABinary("-", p.aexpr, p.term)
 
-    @_('term')
+    @_("term")
     def aexpr(self, p):
-        pass
+        return p.term
 
-    @_('term MULT fact')
+    @_("term TIMES fact")
     def term(self, p):
-        pass
+        return ABinary("*", p.term, p.fact)
 
-    @_('term DIV fact')
+    @_("term DIVIDE fact")
     def term(self, p):
-        pass
+        return ABinary("/", p.term, p.fact)
 
-    @_('fact')
+    @_("fact")
     def term(self, p):
-        pass
+        return p.fact
 
-    @_('MINUS fact')
+    @_("MINUS fact")
     def fact(self, p):
-        pass
+        return AUMinus(p.fact)
 
-    @_('call')
+    @_("call")
     def fact(self, p):
-        pass
+        return p.call
 
-    @_('NUMBER')
+    @_("NUMBER")
     def fact(self, p):
-        pass
+        return p.NUMBER
 
     @_('"(" aexpr ")"')
     def fact(self, p):
-        pass
+        return p.aexpr
 
-    @_('ID')
+    @_("ID")
     def fact(self, p):
-        pass
+        return p.ID
 
     @_('ID "[" aexpr "]"')
     def fact(self, p):
-        pass
+        return GetVector(p.ID, p.aexpr)
 
-    @_('aexpr NEQ aexpr')
+    @_("aexpr NE aexpr")
     def cexpr(self, p):
-        pass
+        return Comparison("!=", p.aexpr, p.aexpr)
 
-    @_('aexpr EQ aexpr')
+    @_("aexpr EQ aexpr")
     def cexpr(self, p):
-        pass
+        return Comparison("==", p.aexpr0, p.aexpr1)
 
-    @_('aexpr GT aexpr')
+    @_("aexpr GT aexpr")
     def cexpr(self, p):
-        pass
+        return Comparison(">", p.aexpr, p.aexpr)
 
-    @_('aexpr GE aexpr')
+    @_("aexpr GE aexpr")
     def cexpr(self, p):
-        pass
+        return Comparison(">=", p.aexpr, p.aexpr)
 
-    @_('aexpr LE aexpr')
+    @_("aexpr LE aexpr")
     def cexpr(self, p):
-        pass
+        return Comparison("<=", p.aexpr, p.aexpr)
 
-    @_('aexpr LT aexpr')
+    @_("aexpr LT aexpr")
     def cexpr(self, p):
-        pass
+        return Comparison("<", p.aexpr, p.aexpr)
 
-    @_('STRING')
+    @_("STRING")
     def sexpr(self, p):
-        pass
+        return SLiteral(p.STRING)
 
-    @_('expr subargument')
+    @_("expr subargument")
     def arguments(self, p):
-        pass
+        return [p.expr] + p.subargument
 
     @_('"," expr subargument')
     def subargument(self, p):
-        pass
+        return [p.expr] + p.subargument
 
-    @_('empty')
+    @_("empty")
     def subargument(self, p):
-        pass
+        return []
 
-    @_('empty')
+    @_("empty")
     def arguments(self, p):
-        pass
+        return []
 
     @_('ID "(" parameters ")" block')
     def function(self, p):
-        pass
+        return FunDecl(p.ID, p.parameters, p.block)
 
-    @_('ID subparameters')
+    @_("ID subparameters")
     def parameters(self, p):
-        pass
+        return [p.ID] + p.subparameters
 
     @_('"," ID subparameters')
     def subparameters(self, p):
-        pass
+        return [p.ID] + p.subparameters
 
-    @_('empty')
+    @_("empty")
     def subparameters(self, p):
-        pass
+        return []
 
-    @_('empty')
+    @_("empty")
     def parameters(self, p):
-        pass
+        return []
 
     @_('ID "(" arguments ")"')
     def call(self, p):
-        pass
+        return Call(p.ID, p.arguments)
 
-    @_('')
+    @_("")
     def empty(self, p):
         pass
