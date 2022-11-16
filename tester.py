@@ -14,7 +14,7 @@ arg_parser.add_argument('--save', action='store_true')
 
 args = arg_parser.parse_args()
 
-with open(args.filename,'r') as f:
+with open(args.filename, 'r') as f:
     source = f.read()
 
 if args.test_type == 'scan':

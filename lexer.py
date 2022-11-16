@@ -14,7 +14,7 @@ class Lexer(Lexer):
     literals = {'(', ')', '{', '}', '[', ']', ';', ',', '#'}
 
     ignore = ' \t'
-    ignore_comment = '//'
+    ignore_comment = '//.*'
     ignore_newline = '\n+'
     
     ID = r'[a-zA-Z_][a-zA-Z0-9_]*'

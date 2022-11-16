@@ -73,6 +73,11 @@ class Parser(Parser):
     def free_statement(self, p):
         return p.simpleStmt
 
+    @_('error ";"')
+    def free_statement(self, p):
+        print("Syntax Error: Invalid statement; at line", p.lineno)
+        return ErrorStmt()
+
     @_("compoundStmt")
     def free_statement(self, p):
         return p.compoundStmt
@@ -294,34 +299,6 @@ class Parser(Parser):
         )
         return ErrorStmt()
 
-    @_('FOR "(" error ";" forLexpr ";" forAsgn ")" statement')
-    def forStmt(self, p):
-        print(
-            "Syntax Error: Bad expression at for statement; at line",
-            p.lineno,
-            "character",
-            p.index,
-        )
-        return ErrorStmt()
-
-    @_('FOR "(" forAsgn ";" error ";" forAsgn ")" statement')
-    def forStmt(self, p):
-        print(
-            "Syntax Error: Invalid logical expression at for statement; at line",
-            p.lineno,
-        )
-        return ErrorStmt()
-
-    @_('FOR "(" forAsgn ";" forLexpr ";" error ")" statement')
-    def forStmt(self, p):
-        print(
-            "Syntax Error: Bad expression at for statement; at line",
-            p.lineno,
-            "character",
-            p.index,
-        )
-        return ErrorStmt()
-
     """
     Block
     """
@@ -337,6 +314,10 @@ class Parser(Parser):
     @_("empty")
     def blockStmt(self, p):
         return []
+
+    @_('error "}"')
+    def block(self, p):
+        return ErrorStmt()
 
     """
     Expressions
@@ -482,22 +463,6 @@ class Parser(Parser):
     def sexpr(self, p):
         return SLiteral(p.STRING)
 
-    @_("expr subargument")
-    def arguments(self, p):
-        return [p.expr] + p.subargument
-
-    @_('"," expr subargument')
-    def subargument(self, p):
-        return [p.expr] + p.subargument
-
-    @_("empty")
-    def subargument(self, p):
-        return []
-
-    @_("empty")
-    def arguments(self, p):
-        return []
-
     """
     Function Definition
     """
@@ -525,14 +490,39 @@ class Parser(Parser):
     def parameters(self, p):
         return []
 
+    """
+    Function Call - Definition
+    """
+
+    @_("expr subargument")
+    def arguments(self, p):
+        return [p.expr] + p.subargument
+
+    @_('"," expr subargument')
+    def subargument(self, p):
+        return [p.expr] + p.subargument
+
+    @_("empty")
+    def subargument(self, p):
+        return []
+
+    @_("empty")
+    def arguments(self, p):
+        return []
+
     @_('ID "(" arguments ")"')
     def call(self, p):
         id = Identifier(p.ID, p.lineno, p.index)
         return Call(id, p.arguments)
 
+    """
+    Empty
+    """
+
     @_("")
     def empty(self, p):
         pass
+
 
 """
     def error(self, tok):

@@ -1,0 +1,32 @@
+var a;
+var a = 1;
+
+fun aa(f, f ,f )
+{
+	var x = add + me;
+	var y = err + ;
+	y = subtract - me;
+	z = multiply * me;
+        t = divide / me;
+	k = "AFASD";
+	l = 0afsa;
+	p = 1532;
+	if #abcd[asd] {}
+}
+
+fun bb(a)
+{
+	while (#t) {}
+	// for (a=0 #b  {} // Problematic case 1
+
+
+	// Parsing does not stop but very strange error
+	for (a=0;#b c=0 {}
+	for (a=0;#b a = aa {
+		var a;
+
+		} // Interesting case for error reporting
+	
+	for (a=0;#b; a = aa) {}
+}
+
