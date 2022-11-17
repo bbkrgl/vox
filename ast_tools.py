@@ -86,13 +86,6 @@ class FunDecl(Decl):
 
 
 @dataclass(frozen=True)
-class ErrorDecl(Decl):
-    """this node should correspond to an error during parsing that is resolved with character re-synchronization."""
-
-    pass
-
-
-@dataclass(frozen=True)
 class Program(ASTNode):
     """the root node of the AST."""
 
@@ -255,7 +248,6 @@ class ASTNodeVisitor(ABC):
             ErrorStmt: self.visit_ErrorStmt,
             VarDecl: self.visit_VarDecl,
             FunDecl: self.visit_FunDecl,
-            ErrorDecl: self.visit_ErrorDecl,
             Assign: self.visit_Assign,
             SetVector: self.visit_SetVector,
             ForLoop: self.visit_ForLoop,
@@ -290,10 +282,6 @@ class ASTNodeVisitor(ABC):
 
     @abstractmethod
     def visit_ErrorStmt(self, errorstmt: ErrorStmt):
-        pass
-
-    @abstractmethod
-    def visit_ErrorDecl(self, errorstmt: ErrorDecl):
         pass
 
     @abstractmethod
@@ -402,9 +390,6 @@ class PrintVisitor(ASTNodeVisitor):
 
     def visit_ErrorStmt(self, errorstmt: ErrorStmt):
         return "ERROR_STMT;"
-
-    def visit_ErrorDecl(self, errorstmt: ErrorDecl):
-        return "ERROR_DECL"
 
     def visit_VarDecl(self, vardecl: VarDecl):
         if vardecl.initializer is None:

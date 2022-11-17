@@ -33,21 +33,6 @@ class Parser(Parser):
     def varDecl(self, p):
         return []
 
-    @_('VAR error ";" varDecl', 'VAR error ASSIGN init ";" varDecl')
-    def varDecl(self, p):
-        print("Syntax Error: Invalid variable identifier; at line", p.lineno)
-        return [ErrorDecl()] + p.varDecl
-
-    @_('VAR ID ASSIGN error ";" varDecl')
-    def varDecl(self, p):
-        print(
-            "Syntax Error: Invalid initialization for variable",
-            p.ID,
-            "; at line",
-            p.lineno,
-        )
-        return [ErrorDecl()] + p.varDecl
-
     """
     Global Function Declarations
     """
@@ -59,11 +44,6 @@ class Parser(Parser):
     @_("empty")
     def funDecl(self, p):
         return []
-
-    @_("FUN error funDecl")
-    def funDecl(self, p):
-        print("Syntax Error: Invalid function definition; at line", p.lineno)
-        return [ErrorDecl()] + p.funDecl
 
     """
     Free Statements
