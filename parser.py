@@ -73,11 +73,6 @@ class Parser(Parser):
     def free_statement(self, p):
         return p.simpleStmt
 
-    @_('error ";"')
-    def free_statement(self, p):
-        print("Syntax Error: Invalid statement; at line", p.lineno)
-        return ErrorStmt()
-
     @_("compoundStmt")
     def free_statement(self, p):
         return p.compoundStmt
@@ -109,23 +104,6 @@ class Parser(Parser):
     @_("empty")
     def subarrinit(self, p):
         return []
-
-    @_('"[" error subarrinit "]"')
-    def init(self, p):
-        print(
-            "Syntax Error: Invalid expression at array initialization; at line",
-            p.lineno,
-            "character",
-            p.index,
-        )
-        return ErrorStmt()
-
-    @_('"," error subarrinit')
-    def subarrinit(self, p):
-        print(
-            "Syntax Error: Invalid expression; at line", p.lineno, "character", p.index
-        )
-        return ErrorStmt()
 
     """
     Simple-Compound Statements
@@ -181,30 +159,6 @@ class Parser(Parser):
         id = Identifier(p.ID, p.lineno, p.index)
         return SetVector(id, p.aexpr, p.expr)
 
-    @_("error ASSIGN expr", 'error "[" aexpr "]" ASSIGN expr')
-    def asgnStmt(self, p):
-        print("Syntax Error: Invalid variable identifier; at line", p.lineno)
-        return ErrorStmt()
-
-    @_("ID ASSIGN error", 'ID "[" aexpr "]" ASSIGN error')
-    def asgnStmt(self, p):
-        print(
-            "Syntax Error: Invalid assignment for identifier",
-            p.ID + ", bad right hand-side; at line",
-            p.lineno,
-        )
-        return ErrorStmt()
-
-    @_('ID "[" error "]" ASSIGN expr')
-    def asgnStmt(self, p):
-        print(
-            "Syntax Error: Bad array subscript expression for identifier",
-            p.ID,
-            "at assignment; at line",
-            p.lineno,
-        )
-        return ErrorStmt()
-
     """
     Print Statement
     """
@@ -213,11 +167,6 @@ class Parser(Parser):
     def printStmt(self, p):
         return Print(p.expr)
 
-    @_("PRINT error")
-    def printStmt(self, p):
-        print("Syntax Error: Bad expression at print statement; at line", p.lineno)
-        return ErrorStmt()
-
     """
     Return Statement
     """
@@ -225,11 +174,6 @@ class Parser(Parser):
     @_("RETURN expr")
     def returnStmt(self, p):
         return Return(p.expr)
-
-    @_("RETURN error")
-    def returnStmt(self, p):
-        print("Syntax Error: Bad expression at return statement; at line", p.lineno)
-        return ErrorStmt()
 
     """
     If Statement
@@ -243,14 +187,6 @@ class Parser(Parser):
     def ifStmt(self, p):
         return IfElse(p.lexpr, p.statement0, p.statement1)
 
-    @_("IF error statement", "IF error statement ELSE statement")
-    def ifStmt(self, p):
-        print(
-            "Syntax Error: Invalid logical expression at if statement; at line",
-            p.lineno,
-        )
-        return ErrorStmt()
-
     """
     While Statement
     """
@@ -258,14 +194,6 @@ class Parser(Parser):
     @_("WHILE lexpr statement")
     def whileStmt(self, p):
         return WhileLoop(p.lexpr, p.statement)
-
-    @_("WHILE error statement")
-    def whileStmt(self, p):
-        print(
-            "Syntax Error: Invalid logical expression at while statement; at line",
-            p.lineno,
-        )
-        return ErrorStmt()
 
     """
     For Statement
@@ -291,14 +219,6 @@ class Parser(Parser):
     def forLexpr(self, p):
         return None
 
-    @_('FOR "(" error ")" statement')
-    def forStmt(self, p):
-        print(
-            "Syntax Error: Ill formed for statement; at line",
-            p.lineno,
-        )
-        return ErrorStmt()
-
     """
     Block
     """
@@ -314,10 +234,6 @@ class Parser(Parser):
     @_("empty")
     def blockStmt(self, p):
         return []
-
-    @_('error "}"')
-    def block(self, p):
-        return ErrorStmt()
 
     """
     Expressions
@@ -523,12 +439,11 @@ class Parser(Parser):
     def empty(self, p):
         pass
 
+    """
+    Error Handling
+    """
 
-"""
-    def error(self, tok):
-        while True:
-            tok = next(self.tokens, None)
-            if not tok or tok.type == ";" or tok.type == "}":
-                break
-            self.errok()
-"""
+    @_('error ";"', 'error "}"')
+    def free_statement(self, p):
+        print("Syntax error at line", p.lineno)
+        return ErrorStmt()

@@ -27,6 +27,6 @@ fun bb(a)
 
 		} // Interesting case for error reporting
 	
-	for (a=0;#b; a = aa) {}
+	for (a=0;#b a = aa) {}
 }
 
