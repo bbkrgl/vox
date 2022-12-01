@@ -3,23 +3,188 @@ from typing import List
 from parser import Parser
 from lexer import Lexer
 
+
+class Intermediate(ASTNodeVisitor):
+    def __init__(self, source):
+        super().__init__()
+
+        lexer = Lexer()
+        parser = Parser()
+
+        self.tokens = lexer.tokenize(source)
+        self.ast = parser.parse(self.tokens)
+
+        self.symbol_table = [[]]
+        self._curr_scope_level = 0
+        self._fun_vars = []
+
+        self.undeclared_vars = []
+        self.multiple_declarations = []
+
+        self.visit(self.ast)
+
+    def in_scope(self, var, scan_curr_scope=False):
+        if not scan_curr_scope:
+            for scope in self.symbol_table:
+                if var in scope:
+                    return True
+        else:
+            if var in self.symbol_table[self._curr_scope_level]:
+                return True
+
+        return False
+
+    def visit_SLiteral(self, sliteral: SLiteral):
+        pass
+
+    def visit_Program(self, program: Program):
+        for elem in program.var_decls:
+            self.visit(elem)
+        for elem in program.fun_decls:
+            self.visit(elem)
+        for elem in program.statements:
+            self.visit(elem)
+
+    def visit_ErrorStmt(self, errorstmt: ErrorStmt):
+        pass
+
+    def visit_VarDecl(self, vardecl: VarDecl):
+        if not self.in_scope(vardecl.identifier.name, True):
+            self.symbol_table[self._curr_scope_level].append(
+                vardecl.identifier.name)
+        else:
+            self.multiple_declarations.append(vardecl.identifier.name)
+
+        if vardecl.initializer is List:
+            for elem in vardecl.initializer:
+                self.visit(elem)
+        elif vardecl.initializer is Expr:
+            self.visit(elem)
+
+    def visit_FunDecl(self, fundecl: FunDecl):
+        if not self.in_scope(fundecl.identifier.name, True):
+            self.symbol_table[self._curr_scope_level].append(
+                fundecl.identifier.name)
+        else:
+            self.multiple_declarations.append(fundecl.identifier.name)
+        self._fun_vars = [elem.name for elem in fundecl.params]
+
+        self.visit(fundecl.body)
+
+    def visit_Assign(self, assign: Assign):
+        if not self.in_scope(assign.identifier.name):
+            self.undeclared_vars.append(assign.identifier.name)
+
+        self.visit(assign.expr)
+
+    def visit_SetVector(self, setvector: SetVector):
+        if not self.in_scope(setvector.identifier.name):
+            self.undeclared_vars.append(setvector.identifier.name)
+
+        self.visit(setvector.vector_index)
+        self.visit(setvector.expr)
+
+    def visit_ForLoop(self, forloop: ForLoop):
+        if forloop.initializer is not None:
+            self.visit(forloop.initializer)
+        if forloop.condition is not None:
+            self.visit(forloop.condition)
+        if forloop.increment is not None:
+            self.visit(forloop.increment)
+
+        self.visit(forloop.body)
+
+    def visit_Return(self, returnn: Return):
+        self.visit(returnn.expr)
+
+    def visit_WhileLoop(self, whileloop: WhileLoop):
+        self.visit(whileloop.condition)
+        self.visit(whileloop.body)
+
+    def visit_Block(self, block: Block):
+        self.symbol_table.append(self._fun_vars)
+        self._fun_vars = []
+        self._curr_scope_level += 1
+
+        for elem in block.var_decls:
+            self.visit(elem)
+        for elem in block.statements:
+            self.visit(elem)
+
+        self.symbol_table = self.symbol_table[:-1]
+        self._curr_scope_level -= 1
+
+    def visit_Print(self, printt: Print):
+        self.visit(printt.expr)
+
+    def visit_IfElse(self, ifelse: IfElse):
+        self.visit(ifelse.condition)
+        self.visit(ifelse.if_branch)
+
+        if ifelse.else_branch is not None:
+            self.visit(ifelse.else_branch)
+
+    def visit_LBinary(self, lbinary: LBinary):
+        self.visit(lbinary.left)
+        self.visit(lbinary.right)
+
+    def visit_Comparison(self, comparison: Comparison):
+        self.visit(comparison.left)
+        self.visit(comparison.right)
+
+    def visit_LLiteral(self, lliteral: LLiteral):
+        pass
+
+    def visit_LPrimary(self, lprimary: LPrimary):
+        self.visit(lprimary.primary)
+
+    def visit_GetVector(self, getvector: GetVector):
+        if not self.in_scope(getvector.identifier.name):
+            self.undeclared_vars.append(getvector.identifier.name)
+
+        self.visit(getvector.vector_index)
+
+    def visit_Variable(self, variable: Variable):
+        if not self.in_scope(variable.identifier.name):
+            self.undeclared_vars.append(variable.identifier.name)
+
+    def visit_LNot(self, lnot: LNot):
+        self.visit(lnot.right)
+
+    def visit_ABinary(self, abinary: ABinary):
+        self.visit(abinary.left)
+        self.visit(abinary.right)
+
+    def visit_AUMinus(self, auminus: AUMinus):
+        self.visit(auminus.right)
+
+    def visit_ALiteral(self, aliteral: ALiteral):
+        pass
+
+    def visit_Call(self, call: Call):
+        if not self.in_scope(call.identifier.name):
+            self.undeclared_vars.append(call.identifier.name)
+
+        for elem in call.arguments:
+            self.visit(elem)
+
+
 def process(source):
-    '''parse the source text here. you may return the AST specified in ast_tools.py or something else.'''
-    lexer = Lexer()
-    parser = Parser()
-    
-    tokens = lexer.tokenize(source)
-    return parser.parse(tokens)
+    """parse the source text here. you may return the AST specified in ast_tools.py or something else."""
+    return Intermediate(source)
+
 
 def generate_ast(intermediate) -> Program:
-    '''return the AST using the output of process() here.'''
-    return intermediate
+    """return the AST using the output of process() here."""
+    return intermediate.ast
+
 
 def undeclared_vars(intermediate) -> List[Identifier]:
-    '''return all of the undeclared uses of the variables in the order they appear in the source code here, using the return value of process()'''
-    pass
+    """return all of the undeclared uses of the variables in the order they appear in the source code here, using the return value of process()"""
+    return intermediate.undeclared_vars
+
 
 def multiple_var_declarations(intermediate) -> List[Identifier]:
-    '''return all of the subsequent declarations of a previously declared variable if the re-declaration cannot be explained by shadowing,
-    in the order they appear in the source code, using the return value of process()'''
-    pass
+    """return all of the subsequent declarations of a previously declared variable if the re-declaration cannot be explained by shadowing,
+    in the order they appear in the source code, using the return value of process()"""
+    return intermediate.multiple_declarations
