@@ -55,18 +55,18 @@ class Intermediate(ASTNodeVisitor):
         else:
             self.multiple_declarations.append(vardecl.identifier.name)
 
-        if vardecl.initializer is List:
+        if type(vardecl.initializer) == list:
             for elem in vardecl.initializer:
                 self.visit(elem)
-        elif vardecl.initializer is Expr:
-            self.visit(elem)
+        elif vardecl.initializer is not None:
+            self.visit(vardecl.initializer)
 
     def visit_FunDecl(self, fundecl: FunDecl):
-        if not self.in_scope(fundecl.identifier.name, True):
-            self.symbol_table[self._curr_scope_level].append(
-                fundecl.identifier.name)
-        else:
-            self.multiple_declarations.append(fundecl.identifier.name)
+        # if not self.in_scope(fundecl.identifier.name, True):
+        #    self.symbol_table[self._curr_scope_level].append(
+        #        fundecl.identifier.name)
+        # else:
+        #    self.multiple_declarations.append(fundecl.identifier.name)
         self._fun_vars = [elem.name for elem in fundecl.params]
 
         self.visit(fundecl.body)
@@ -102,9 +102,16 @@ class Intermediate(ASTNodeVisitor):
         self.visit(whileloop.body)
 
     def visit_Block(self, block: Block):
-        self.symbol_table.append(self._fun_vars)
-        self._fun_vars = []
+        self.symbol_table.append([])
         self._curr_scope_level += 1
+
+        for identifier in self._fun_vars:
+            if not self.in_scope(identifier, True):
+                self.symbol_table[self._curr_scope_level].append(identifier)
+            else:
+                self.multiple_declarations.append(identifier)
+
+        self._fun_vars = []
 
         for elem in block.var_decls:
             self.visit(elem)
@@ -162,8 +169,8 @@ class Intermediate(ASTNodeVisitor):
         pass
 
     def visit_Call(self, call: Call):
-        if not self.in_scope(call.identifier.name):
-            self.undeclared_vars.append(call.identifier.name)
+        if not self.in_scope(call.callee.name):
+            self.undeclared_vars.append(call.callee.name)
 
         for elem in call.arguments:
             self.visit(elem)

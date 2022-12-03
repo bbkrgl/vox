@@ -1,6 +1,5 @@
 import argparse
-from lex import VoxLexer
-from parser import Parser
+import misc
 
 if __name__ == '__main__':
     argparser = argparse.ArgumentParser(prog='Vox Compiler',
@@ -21,6 +20,4 @@ if __name__ == '__main__':
 
     # TODO: Preprocessing, macros etc.
 
-    lexer = VoxLexer()
-    parser = Parser()
-    ast = parser.parse(lexer.tokenize(code))
+    ast = misc.generate_ast(misc.process(code))
