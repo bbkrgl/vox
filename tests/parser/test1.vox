@@ -1,0 +1,15 @@
+// Should parse fine without any errors in parsing or semantic checks
+
+var arg1 = 0;
+var arg2 = 1;
+
+fun not_swap(arg1, arg2)
+{
+	var not_swap = arg1;
+	arg1 = arg2;
+	arg2 = not_swap;
+
+	return not_swap;
+}
+
+arg2 = not_swap(arg1, arg2);

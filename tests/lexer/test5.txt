@@ -1,0 +1,13 @@
+// Test if else
+ifififififiififififfffiiiiff if else if if else
+i f
+i
+f
+
+// Test faulty tokens
+::::: ; , ;;;;;;: ~~~~~~
+// '\' token prints like '\\'
+/\\\\\\
+%&& ^
+''
+||||

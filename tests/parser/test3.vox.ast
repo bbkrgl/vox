@@ -1,0 +1,38 @@
+TOP_LVL VAR_DECLS:
+var retval;
+var acc = "";
+var i = 0.0;
+var strarr = ["0", "1", "2", "3", "4"];
+TOP_LVL FUN_DECLS:
+fun print_arg(p1, p2){
+  VAR_DECLS:
+    var i;
+    var acc = "";
+  STMTS:
+    if (Lc== p2 0.0) {
+      VAR_DECLS:
+    
+      STMTS:
+        for (i = 0.0;(Lc< i 5.0);i = (A+ i 1.0)) {
+          VAR_DECLS:
+        
+          STMTS:
+            print p1[i];
+            ERROR_STMT;
+        }
+    } else if (Lc== p2 1.0) {
+      VAR_DECLS:
+    
+      STMTS:
+        for (;(Lc>= i 0.0);i = (A- i 1.0)) ERROR_STMT;
+        acc = (A+ acc p1[4.0]);
+        print acc;
+    } endif endif
+    return acc;
+}
+TOP_LVL STMTS:
+retval = print_arg(strarr, 0.0);
+for (;(Lc>= i 0.0);i = (A- i 1.0)) ERROR_STMT;
+acc = (A+ acc strarr[4.0]);
+ERROR_STMT;
+if (Lc== retval strarr) print "Eq"; else print "Neq"; endif

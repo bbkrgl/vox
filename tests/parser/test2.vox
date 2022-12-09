@@ -1,0 +1,33 @@
+// Statement tests
+var unused;
+var arr1 = [0, 1, 2, 3, 4, 5, 6, 7];
+
+fun whilefun(arr)
+{
+	var i = 0;
+
+	while (i < 5)
+		i = i + 1;
+
+	if (i < 4)
+		return i;
+	else
+		for (; i < 8; i = i + 1)
+			print arr[i];
+
+	return i;
+}
+
+// Programmer wrote 'for' instead of 'while'
+for (i < 4)
+	print i; // Not in undeclared vars
+
+while (true) {
+	var d1 = 0;
+	var d2 = 100;
+	if (d1 > d2)
+		return 0; // Doesn't make much sense to use it here but it is a valid statement
+	
+	d1 = d2/100;
+}
+

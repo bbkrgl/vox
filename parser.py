@@ -4,7 +4,7 @@ from ast_tools import *
 
 
 class Parser(Parser):
-    debugfile = "parser.debug"
+    #debugfile = "parser.debug"
     tokens = Lexer.tokens
 
     """

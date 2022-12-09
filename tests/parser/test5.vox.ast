@@ -1,0 +1,93 @@
+TOP_LVL VAR_DECLS:
+var multiple_parantheses_test = 0.0;
+var multiple_parantheses_test = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+var multiple_parantheses_test = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, #multiple_parantheses_test[0.0]];
+TOP_LVL FUN_DECLS:
+fun multiple_blocks(){
+  VAR_DECLS:
+    var i;
+  STMTS:
+    {
+      VAR_DECLS:
+        var i;
+      STMTS:
+        {
+          VAR_DECLS:
+            var i;
+          STMTS:
+            {
+              VAR_DECLS:
+                var i;
+              STMTS:
+                {
+                  VAR_DECLS:
+                    var i;
+                  STMTS:
+                    {
+                      VAR_DECLS:
+                        var i;
+                      STMTS:
+                        {
+                          VAR_DECLS:
+                            var i;
+                          STMTS:
+                            {
+                              VAR_DECLS:
+                                var i;
+                              STMTS:
+                                {
+                                  VAR_DECLS:
+                                    var i;
+                                  STMTS:
+                                    {
+                                      VAR_DECLS:
+                                        var i;
+                                      STMTS:
+                                        {
+                                          VAR_DECLS:
+                                            var i;
+                                          STMTS:
+                                            {
+                                              VAR_DECLS:
+                                                var i;
+                                              STMTS:
+                                                {
+                                                  VAR_DECLS:
+                                                    var i;
+                                                  STMTS:
+                                                    {
+                                                      VAR_DECLS:
+                                                        var i;
+                                                      STMTS:
+                                                        {
+                                                          VAR_DECLS:
+                                                            var i;
+                                                          STMTS:
+                                                            {
+                                                              VAR_DECLS:
+                                                                var i;
+                                                              STMTS:
+                                                                {
+                                                                  VAR_DECLS:
+                                                                    var i;
+                                                                  STMTS:
+                                                                
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+TOP_LVL STMTS:
+ERROR_STMT;

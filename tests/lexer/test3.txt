@@ -1,0 +1,19 @@
+// Test if !, !=, ==, >=, > etc. is distinguished
+!====!!>==!=!=!=!=!=!=!=!=><=! != == = ! =>>= <=<<=
+print tereturn
+// Test if tabs are ignored
+			whileifwhile
+// Test keywords
+var varvar v ar fun funn fu n nn
+// Test parantheses
+[]{{{{{{{{[[[[]]]]}}}}}}}};
+##ast
+// Test numbers
+"015.0" 0.5 .0x264851. 12153
+// Test string with newline
+"
+dsadsa
+dsada
+"
+// Test faulty strings
+"""

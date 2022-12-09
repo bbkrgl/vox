@@ -1,0 +1,15 @@
+var dummy;
+var multiple_parantheses_test = ((((((0))))));
+var multiple_parantheses_test = [0,1,2,3,4,5,
+	(((((((((6)))))))))];
+var multiple_parantheses_test = [0,1,2,3,4,5,
+	(((((((((#multiple_parantheses_test[0])))))))))];
+
+// No multiple definitions must occur
+fun multiple_blocks()
+{ var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; } } } } } } } } } } } } } } } } }
+
+dummy = #dummy;
+dummy = #dummy;
+dummy = #(#dummy); // Error
+multiple_parantheses_test = ((((((((([0,1,2,3,4,5]))))))))); // Error

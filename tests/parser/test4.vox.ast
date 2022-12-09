@@ -1,0 +1,19 @@
+TOP_LVL VAR_DECLS:
+var decl1 = 0.0;
+TOP_LVL FUN_DECLS:
+fun logical_exp_test(arg1, arg2){
+  VAR_DECLS:
+
+  STMTS:
+    ERROR_STMT;
+    if #arg1 return 1.0; else if #arg2[0.0] return 1.0; else if !#arg1 return 2.0; else if !#arg2[2.0] return 1.0; else if true return #arg2[0.0]; endif endif endif endif endif
+    ERROR_STMT;
+}
+TOP_LVL STMTS:
+if (Lc== decl1 0.0) {
+  VAR_DECLS:
+
+  STMTS:
+    return 0.0;
+} endif
+ERROR_STMT;

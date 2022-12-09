@@ -1,0 +1,8 @@
+a b c d e f g 
+. . . 
+...
+0.2 5 5.2 ,
+and or andor orand orandreturn
+return areturn areturn,,,
+breturn... return...
+""bb"aa"b""

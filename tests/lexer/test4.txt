@@ -1,0 +1,13 @@
+// Test true-false
+truetrue true falsetrue falsefalse false
+
+// Test binary ops
+*/-++-*/
+
+// Test comments
+//AaA
+/a/*a//asda
+
+// Test for and or
+orfor or for
+foror for or

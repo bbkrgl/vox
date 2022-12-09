@@ -50,8 +50,7 @@ class Intermediate(ASTNodeVisitor):
 
     def visit_VarDecl(self, vardecl: VarDecl):
         if not self.in_scope(vardecl.identifier.name, True):
-            self.symbol_table[self._curr_scope_level].append(
-                vardecl.identifier.name)
+            self.symbol_table[self._curr_scope_level].append(vardecl.identifier.name)
         else:
             self.multiple_declarations.append(vardecl.identifier.name)
 
@@ -62,11 +61,10 @@ class Intermediate(ASTNodeVisitor):
             self.visit(vardecl.initializer)
 
     def visit_FunDecl(self, fundecl: FunDecl):
-        # if not self.in_scope(fundecl.identifier.name, True):
-        #    self.symbol_table[self._curr_scope_level].append(
-        #        fundecl.identifier.name)
-        # else:
-        #    self.multiple_declarations.append(fundecl.identifier.name)
+        if not self.in_scope(fundecl.identifier.name, True):
+            self.symbol_table[self._curr_scope_level].append(fundecl.identifier.name)
+        else:
+            self.multiple_declarations.append(fundecl.identifier.name)
         self._fun_vars = [elem.name for elem in fundecl.params]
 
         self.visit(fundecl.body)
