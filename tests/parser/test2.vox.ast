@@ -1,18 +1,20 @@
 TOP_LVL VAR_DECLS:
 var unused;
 var arr1 = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0];
+var whilefun;
 TOP_LVL FUN_DECLS:
 fun whilefun(arr){
   VAR_DECLS:
     var i = 0.0;
   STMTS:
+    ERROR_STMT;
     while (Lc< i 5.0) i = (A+ i 1.0);
     if (Lc< i 4.0) return i; else for (;(Lc< i 8.0);i = (A+ i 1.0)) print arr[i]; endif
     return i;
 }
 TOP_LVL STMTS:
 ERROR_STMT;
-while true {
+while True {
   VAR_DECLS:
     var d1 = 0.0;
     var d2 = 100.0;

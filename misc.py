@@ -14,8 +14,9 @@ class Intermediate(ASTNodeVisitor):
         self.tokens = lexer.tokenize(source)
         self.ast = parser.parse(self.tokens)
 
-        self.symbol_table = [[]]
+        self._symbol_table = [[]]
         self._curr_scope_level = 0
+        self._funs = []
         self._fun_vars = []
 
         self.undeclared_vars = []
@@ -25,11 +26,11 @@ class Intermediate(ASTNodeVisitor):
 
     def in_scope(self, var, scan_curr_scope=False):
         if not scan_curr_scope:
-            for scope in self.symbol_table:
+            for scope in self._symbol_table:
                 if var in scope:
                     return True
         else:
-            if var in self.symbol_table[self._curr_scope_level]:
+            if var in self._symbol_table[self._curr_scope_level]:
                 return True
 
         return False
@@ -50,9 +51,10 @@ class Intermediate(ASTNodeVisitor):
 
     def visit_VarDecl(self, vardecl: VarDecl):
         if not self.in_scope(vardecl.identifier.name, True):
-            self.symbol_table[self._curr_scope_level].append(vardecl.identifier.name)
+            self._symbol_table[self._curr_scope_level].append(
+                vardecl.identifier.name)
         else:
-            self.multiple_declarations.append(vardecl.identifier.name)
+            self.multiple_declarations.append(vardecl.identifier)
 
         if type(vardecl.initializer) == list:
             for elem in vardecl.initializer:
@@ -61,23 +63,25 @@ class Intermediate(ASTNodeVisitor):
             self.visit(vardecl.initializer)
 
     def visit_FunDecl(self, fundecl: FunDecl):
-        if not self.in_scope(fundecl.identifier.name, True):
-            self.symbol_table[self._curr_scope_level].append(fundecl.identifier.name)
+        if fundecl.identifier.name not in self._funs and not self.in_scope(
+            fundecl.identifier.name, True
+        ):
+            self._funs.append(fundecl.identifier.name)
         else:
-            self.multiple_declarations.append(fundecl.identifier.name)
-        self._fun_vars = [elem.name for elem in fundecl.params]
+            self.multiple_declarations.append(fundecl.identifier)
+        self._fun_vars = [elem for elem in fundecl.params]
 
         self.visit(fundecl.body)
 
     def visit_Assign(self, assign: Assign):
         if not self.in_scope(assign.identifier.name):
-            self.undeclared_vars.append(assign.identifier.name)
+            self.undeclared_vars.append(assign.identifier)
 
         self.visit(assign.expr)
 
     def visit_SetVector(self, setvector: SetVector):
         if not self.in_scope(setvector.identifier.name):
-            self.undeclared_vars.append(setvector.identifier.name)
+            self.undeclared_vars.append(setvector.identifier)
 
         self.visit(setvector.vector_index)
         self.visit(setvector.expr)
@@ -100,12 +104,13 @@ class Intermediate(ASTNodeVisitor):
         self.visit(whileloop.body)
 
     def visit_Block(self, block: Block):
-        self.symbol_table.append([])
+        self._symbol_table.append([])
         self._curr_scope_level += 1
 
         for identifier in self._fun_vars:
-            if not self.in_scope(identifier, True):
-                self.symbol_table[self._curr_scope_level].append(identifier)
+            if not self.in_scope(identifier.name, True):
+                self._symbol_table[self._curr_scope_level].append(
+                    identifier.name)
             else:
                 self.multiple_declarations.append(identifier)
 
@@ -116,7 +121,7 @@ class Intermediate(ASTNodeVisitor):
         for elem in block.statements:
             self.visit(elem)
 
-        self.symbol_table = self.symbol_table[:-1]
+        self._symbol_table = self._symbol_table[:-1]
         self._curr_scope_level -= 1
 
     def visit_Print(self, printt: Print):
@@ -145,13 +150,13 @@ class Intermediate(ASTNodeVisitor):
 
     def visit_GetVector(self, getvector: GetVector):
         if not self.in_scope(getvector.identifier.name):
-            self.undeclared_vars.append(getvector.identifier.name)
+            self.undeclared_vars.append(getvector.identifier)
 
         self.visit(getvector.vector_index)
 
     def visit_Variable(self, variable: Variable):
         if not self.in_scope(variable.identifier.name):
-            self.undeclared_vars.append(variable.identifier.name)
+            self.undeclared_vars.append(variable.identifier)
 
     def visit_LNot(self, lnot: LNot):
         self.visit(lnot.right)
@@ -167,8 +172,8 @@ class Intermediate(ASTNodeVisitor):
         pass
 
     def visit_Call(self, call: Call):
-        if not self.in_scope(call.callee.name):
-            self.undeclared_vars.append(call.callee.name)
+        if call.callee.name not in self._funs:
+            self.undeclared_vars.append(call.callee)
 
         for elem in call.arguments:
             self.visit(elem)

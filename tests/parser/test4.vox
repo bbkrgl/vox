@@ -16,6 +16,7 @@ fun logical_exp_test(arg1, arg2)
 		return #arg2[0];
 
 	return !arg1[0]; // Error
+	return !#arg1[0];
 }
 
 if (decl1 == 0) {

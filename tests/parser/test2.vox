@@ -1,10 +1,12 @@
 // Statement tests
 var unused;
 var arr1 = [0, 1, 2, 3, 4, 5, 6, 7];
+var whilefun;
 
-fun whilefun(arr)
+fun whilefun(arr) // Multiple declaration
 {
 	var i = 0;
+	fun a() {} // No fun in fun
 
 	while (i < 5)
 		i = i + 1;

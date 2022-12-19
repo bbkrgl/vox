@@ -5,7 +5,9 @@ var multiple_parantheses_test = [0,1,2,3,4,5,
 var multiple_parantheses_test = [0,1,2,3,4,5,
 	(((((((((#multiple_parantheses_test[0])))))))))];
 
-// No multiple definitions must occur
+// No multiple definitions must occur in the blocks
+fun multiple_blocks()
+{ var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; } } } } } } } } } } } } } } } } }
 fun multiple_blocks()
 { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; { var i; } } } } } } } } } } } } } } } } }
 

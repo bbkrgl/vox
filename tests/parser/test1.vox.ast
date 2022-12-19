@@ -4,11 +4,11 @@ var arg2 = 1.0;
 TOP_LVL FUN_DECLS:
 fun not_swap(arg1, arg2){
   VAR_DECLS:
-    var not_swap = arg1;
+    var not_swap_ = arg1;
   STMTS:
     arg1 = arg2;
     arg2 = not_swap;
-    return not_swap;
+    return not_swap(arg1, arg2);
 }
 TOP_LVL STMTS:
 arg2 = not_swap(arg1, arg2);

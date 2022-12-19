@@ -6,3 +6,8 @@ and or andor orand orandreturn
 return areturn areturn,,,
 breturn... return...
 ""bb"aa"b""
+true false true false
+"\""
+"\n"
+"\\"
+"print('a')"

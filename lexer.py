@@ -77,6 +77,16 @@ class Lexer(Lexer):
     def ignore_newline(self, t):
         self.lineno += len(t.value)
 
+    @_(r"true")
+    def TRUE(self, t):
+        t.value = True
+        return t
+
+    @_(r"false")
+    def FALSE(self, t):
+        t.value = False
+        return t
+
     def NUMBER(self, t):
         t.value = float(t.value)
         return t
@@ -86,7 +96,6 @@ class Lexer(Lexer):
         return t
 
     def error(self, t):
-        print("Line %d: Bad character %r" % (self.lineno, t.value[0]))
         self.index += 1
         t.value = t.value[0]
         return t

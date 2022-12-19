@@ -6,8 +6,9 @@ fun logical_exp_test(arg1, arg2){
 
   STMTS:
     ERROR_STMT;
-    if #arg1 return 1.0; else if #arg2[0.0] return 1.0; else if !#arg1 return 2.0; else if !#arg2[2.0] return 1.0; else if true return #arg2[0.0]; endif endif endif endif endif
+    if #arg1 return 1.0; else if #arg2[0.0] return 1.0; else if !#arg1 return 2.0; else if !#arg2[2.0] return 1.0; else if True return #arg2[0.0]; endif endif endif endif endif
     ERROR_STMT;
+    return !#arg1[0.0];
 }
 TOP_LVL STMTS:
 if (Lc== decl1 0.0) {

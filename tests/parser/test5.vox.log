@@ -1,5 +1,6 @@
 Undeclared vars:
 
 Multiple var declarations:
-multiple_parantheses_test
-multiple_parantheses_test
+Identifier(name='multiple_parantheses_test', lineno=3, index=58)
+Identifier(name='multiple_parantheses_test', lineno=5, index=127)
+Identifier(name='multiple_blocks', lineno=11, index=490)
