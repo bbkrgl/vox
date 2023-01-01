@@ -1,0 +1,25 @@
+print 1 + 1;
+print 5 + 5.6;
+print 5 / 5.6;
+print 5 * 5.6;
+print 5 - 5.6;
+print -(5 - 5.6);
+
+print true or false;
+print false or false;
+print true and false;
+print true and true;
+
+print "AAA";
+
+print 5 > 4;
+print 5 >= 5;
+print 4 >= 5;
+print 108.2 == 108.2;
+print 108.2 != 108.2;
+print !true;
+print !false;
+
+print "fdaihfas";
+
+print (5 * 5.6) == 28;
