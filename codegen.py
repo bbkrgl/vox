@@ -24,7 +24,10 @@ class CodeGenerator(ASTNodeVisitor):
         self._saved_regs = []
         self._fun_vars = []
         self.str_literals = {}
-        self._tmps = []
+
+        # TODO: When run out of temporary regs, push to stack
+        self._flt_tmps = [f"ft{i}" for i in range(7, -1, -1)]
+        self._bool_tmps = [f"t{i}" for i in range(7, -1, -1)]
 
         lexer = Lexer()
         parser = Parser()
@@ -43,22 +46,14 @@ class CodeGenerator(ASTNodeVisitor):
 
     def get_tmp(self, t):
         if t == "float":
-            if "ft0" not in self._tmps:
-                self._tmps.append("ft0")
-                return "ft0"
-
-            self._tmps.append("ft1")
-            return "ft1"
-
-        if "t0" not in self._tmps:
-            self._tmps.append("t0")
-            return "t0"
-
-        self._tmps.append("t1")
-        return "t1"
+            return self._flt_tmps.pop()
+        return self._bool_tmps.pop()
 
     def free_tmp(self, tmp):
-        self._tmps.remove(tmp)
+        if tmp[0] == "f":
+            self._flt_tmps.append(tmp)
+        else:
+            self._bool_tmps.append(tmp)
 
     def visit_SLiteral(self, sliteral: SLiteral):
         label = ".S" + str(len(self.str_literals))
@@ -67,7 +62,7 @@ class CodeGenerator(ASTNodeVisitor):
 
     def visit_Program(self, program: Program):
         text = "#include <stdio.h>\n.align 2\n.section .text\n.global main\n\n\n"
-        main = "main:\n"  # TODO: Replace with _start
+        main = "main:\n"
         data = "\n\n.section .data\n"
         for elem in program.var_decls:
             loc, init = self.visit(elem)
@@ -385,7 +380,7 @@ class CodeGenerator(ASTNodeVisitor):
     def visit_ALiteral(self, aliteral: ALiteral):
         tmp = self.get_tmp("float")
         val = int.from_bytes(struct.pack("d", aliteral.value), "little")
-        code = f"li t2, {val}\n"
+        code = f"li t2, {val} # {aliteral.value}\n"
         code += f"fmv.d.x {tmp}, t2\n"
         return tmp, code
 
