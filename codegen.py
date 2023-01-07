@@ -334,7 +334,7 @@ class CodeGenerator(ASTNodeVisitor):
             if lreg in self._bool_tmps:
                 self._bool_tmps.remove(lreg)
 
-            code += f"fld {lreg}, (sp)\n"
+            code += f"ld {lreg}, (sp)\n"
             code += f"addi sp, sp, 8\n"
             self._stack.pop()
             if lreg in self._bool_tmp_record:
