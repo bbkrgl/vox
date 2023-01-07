@@ -1,6 +1,4 @@
 from ast_tools import *
-from parser import Parser
-from lexer import Lexer
 import struct
 
 
@@ -20,21 +18,18 @@ class CodeGenerator(ASTNodeVisitor):
         self._symbol_table = [[]]
         self._curr_scope_level = 0
         self._funs = []
-        self._stack = 0
+        self._stack = []
         self._saved_regs = []
         self._fun_vars = []
         self.str_literals = {}
 
-        # TODO: When run out of temporary regs, push to stack
         self._flt_tmps = [f"ft{i}" for i in range(7, -1, -1)]
         self._bool_tmps = [f"t{i}" for i in range(7, -1, -1)]
+        self._flt_tmp_record = []
+        self._bool_tmp_record = []
+        self._label_counter = 0
 
-        lexer = Lexer()
-        parser = Parser()
-        self.tokens = lexer.tokenize(source)
-        self.ast = parser.parse(self.tokens)
-
-        self.code = self.visit(self.ast)
+        self.code = self.visit(source)
 
     def get_from_scope(self, var):
         for scope in self._symbol_table:
@@ -45,15 +40,53 @@ class CodeGenerator(ASTNodeVisitor):
         return None
 
     def get_tmp(self, t):
-        if t == "float":
+        if t == "float" and self._flt_tmps != []:
             return self._flt_tmps.pop()
-        return self._bool_tmps.pop()
+        elif t == "bool" and self._bool_tmps != []:
+            return self._bool_tmps.pop()
+        return None
 
     def free_tmp(self, tmp):
         if tmp[0] == "f":
             self._flt_tmps.append(tmp)
+            if self.is_recorded(tmp):
+                i = list(map(lambda l: l[0], self._flt_tmp_record)).index(tmp)
+                del self._flt_tmp_record[i]
         else:
             self._bool_tmps.append(tmp)
+            if self.is_recorded(tmp):
+                i = list(map(lambda l: l[0], self._bool_tmp_record)).index(tmp)
+                del self._bool_tmp_record[i]
+
+    def is_recorded(self, tmp):
+        if tmp[0] == "f":
+            return tmp in map(lambda l: l[0], self._flt_tmp_record)
+        return tmp in map(lambda l: l[0], self._bool_tmp_record)
+
+    def pop_record(self, tmp=None):
+        if tmp == "float":
+            return self._flt_tmp_record.pop()
+        if tmp == "bool":
+            return self._bool_tmp_record.pop()
+
+        if tmp[0] == "f":
+            if self._flt_tmp_record[-1] != tmp:
+                return self._flt_tmp_record.pop()
+            r = None
+            for record in self._flt_tmp_record[::-1]:
+                if record != tmp:
+                    r = record
+            self._flt_tmp_record.remove(r)
+            return r
+
+        if self._bool_tmp_record[-1] != tmp:
+            return self._bool_tmp_record.pop()
+        r = None
+        for record in self._bool_tmp_record[::-1]:
+            if record != tmp:
+                r = record
+        self._bool_tmp_record.remove(r)
+        return r
 
     def visit_SLiteral(self, sliteral: SLiteral):
         label = ".S" + str(len(self.str_literals))
@@ -82,9 +115,9 @@ class CodeGenerator(ASTNodeVisitor):
         for key, strl in self.str_literals.items():
             data += f'{key}: .string "{strl}"\n'
 
-        data += ".strformat: .string \"%s\\n\"\n"
-        data += ".boolformat: .string \"%d\\n\"\n"
-        data += ".floatformat: .string \"%f\\n\"\n"
+        data += '.strformat: .string "%s\\n"\n'
+        data += '.boolformat: .string "%d\\n"\n'
+        data += '.floatformat: .string "%f\\n"\n'
 
         return text + main + data
 
@@ -286,26 +319,66 @@ class CodeGenerator(ASTNodeVisitor):
             self.visit(ifelse.else_branch)
 
     def visit_LBinary(self, lbinary: LBinary):
-        lreg, lcode = self.visit(lbinary.left)
-        rreg, rcode = self.visit(lbinary.right)
+        lreg, lexpr = self.visit(lbinary.left)
+        rreg, rexpr = self.visit(lbinary.right)
         self.free_tmp(rreg)
 
-        code = lcode + rcode
+        code = lexpr
+        if lbinary.op == "or":
+            code += f"bnez {lreg}, .L{self._label_counter}\n"
+        elif lbinary.op == "and":
+            code += f"beqz {lreg}, .L{self._label_counter}\n"
+
+        code += rexpr
+        if self._stack != [] and self._stack[-1] == lreg:
+            if lreg in self._bool_tmps:
+                self._bool_tmps.remove(lreg)
+
+            code += f"fld {lreg}, (sp)\n"
+            code += f"addi sp, sp, 8\n"
+            self._stack.pop()
+            if lreg in self._bool_tmp_record:
+                self._bool_tmp_record.remove(lreg)
+            self._bool_tmp_record.append(lreg)
+
         if lbinary.op == "or":
             code += f"or {lreg}, {lreg}, {rreg}\n"
         elif lbinary.op == "and":
             code += f"and {lreg}, {lreg}, {rreg}\n"
 
+        code += f".L{self._label_counter}:\n"
+        self._label_counter += 1
+
         return lreg, code
 
     def visit_Comparison(self, comparison: Comparison):
-        lreg, lcode = self.visit(comparison.left)
-        rreg, rcode = self.visit(comparison.right)
+        lreg, lexpr = self.visit(comparison.left)
+        rreg, rexpr = self.visit(comparison.right)
         self.free_tmp(lreg)
         self.free_tmp(rreg)
-        tmp = self.get_tmp("bool")
+        code = lexpr + rexpr
 
-        code = lcode + rcode
+        if self._stack != [] and self._stack[-1] == lreg:
+            if lreg in self._flt_tmps:
+                self._flt_tmps.remove(lreg)
+
+            code += f"fld {lreg}, (sp)\n"
+            code += f"addi sp, sp, 8\n"
+            self._stack.pop()
+            if lreg in self._flt_tmp_record:
+                self._flt_tmp_record.remove(lreg)
+            self._flt_tmp_record.append(lreg)
+
+        tmp = self.get_tmp("bool")
+        if tmp is None:
+            tmp = self._bool_tmp_record.pop(0)
+            self._stack.append(tmp)
+            code += f"addi sp, sp, -8\n"
+            code += f"sd {tmp}, (sp)\n"
+        if tmp in self._bool_tmp_record:
+            self._bool_tmp_record.remove(tmp)
+        self._bool_tmp_record.append(tmp)
+
         if comparison.op == "<":
             code += f"flt.d {tmp}, {lreg}, {rreg}\n"
         elif comparison.op == "<=":
@@ -316,17 +389,25 @@ class CodeGenerator(ASTNodeVisitor):
             code += f"feq.d {tmp}, {lreg}, {rreg}\n"
             code += f"xori {tmp}, {tmp}, 1\n"
         elif comparison.op == ">":
-            code += f"fle.d {tmp}, {lreg}, {rreg}\n"
-            code += f"xori {tmp}, {tmp}, 1\n"
+            code += f"flt.d {tmp}, {rreg}, {lreg}\n"
         elif comparison.op == ">=":
-            code += f"flt.d {tmp}, {lreg}, {rreg}\n"
-            code += f"xori {tmp}, {tmp}, 1\n"
+            code += f"fle.d {tmp}, {rreg}, {lreg}\n"
 
         return tmp, code
 
     def visit_LLiteral(self, lliteral: LLiteral):
         tmp = self.get_tmp("bool")
-        return tmp, f"li {tmp}, {int(lliteral.value)}\n"
+        code = ""
+        if tmp is None:
+            tmp = self._bool_tmp_record.pop(0)
+            self._stack.append(tmp)
+            code += f"addi sp, sp, -8\n"
+            code += f"sd {tmp}, (sp)\n"
+        if tmp in self._bool_tmp_record:
+            self._bool_tmp_record.remove(tmp)
+        self._bool_tmp_record.append(tmp)
+
+        return tmp, code + f"li {tmp}, {int(lliteral.value)}\n"
 
     def visit_LPrimary(self, lprimary: LPrimary):
         preg, code = self.visit(lprimary.primary)
@@ -361,6 +442,17 @@ class CodeGenerator(ASTNodeVisitor):
         self.free_tmp(rreg)
 
         code = lexpr + rexpr
+        if self._stack != [] and self._stack[-1] == lreg:
+            if lreg in self._flt_tmps:
+                self._flt_tmps.remove(lreg)
+
+            code += f"fld {lreg}, (sp)\n"
+            code += f"addi sp, sp, 8\n"
+            self._stack.pop()
+            if lreg in self._flt_tmp_record:
+                self._flt_tmp_record.remove(lreg)
+            self._flt_tmp_record.append(lreg)
+
         if abinary.op == "+":
             code += f"fadd.d {lreg}, {lreg}, {rreg}\n"
         elif abinary.op == "-":
@@ -379,8 +471,18 @@ class CodeGenerator(ASTNodeVisitor):
 
     def visit_ALiteral(self, aliteral: ALiteral):
         tmp = self.get_tmp("float")
+        code = ""
+        if tmp is None:
+            tmp = self._flt_tmp_record.pop(0)
+            self._stack.append(tmp)
+            code += f"addi sp, sp, -8\n"
+            code += f"fsd {tmp}, (sp)\n"
+        if tmp in self._flt_tmp_record:
+            self._flt_tmp_record.remove(tmp)
+        self._flt_tmp_record.append(tmp)
+
         val = int.from_bytes(struct.pack("d", aliteral.value), "little")
-        code = f"li t2, {val} # {aliteral.value}\n"
+        code += f"li t2, {val} # {aliteral.value}\n"
         code += f"fmv.d.x {tmp}, t2\n"
         return tmp, code
 
