@@ -1,0 +1,17 @@
+var x = 0;
+
+if 1 + 1 > 2 {
+	print "Result is 2";
+} else {
+	print "Error";
+}
+
+if 1 + 1 == 2 {
+	print "Result is 2";
+} else {
+	print "Error";
+}
+
+while 1 > 2 {
+	print "AAA";
+}

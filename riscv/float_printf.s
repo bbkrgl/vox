@@ -5,11 +5,21 @@
 main:
 	la 	a0, prompt
 	li 	t2, 4607182418800017408 # 1.0
-	fmv.d.x ft0, t2
+	la 	t0, _l2
+	fld ft0, (t0)
+	#fmv.d.x ft0, t2
 	fmv.x.d	a1, ft0
-	mv 	a1, sp
 	call 	printf
-	flt.s 	t0, ft0, ft1
+
+	la 	a0, promptd
+	li a1, 5
+	la a2, _listpointer
+	sd a1, (a2)
+	call 	printf
+
+	addi sp, sp, -16
+	mv a1, sp
+	
 
 	li 	a0, 0
 	li 	a7, 93
@@ -17,8 +27,9 @@ main:
 
 	.section .data
 helloworld: .ascii "Hello World\n"
-prompt: .asciz "%d\n"
+prompt: .asciz "%f\n"
+promptd: .asciz "%d\n"
 _l1: .double 0.5
-_l2: .double 0.5
-_l3: .word 0
-
+_l2: .dword 4607182418800017408
+_l4: .double 0.5, 0.4
+_listpointer: .dword 0

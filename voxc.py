@@ -4,18 +4,15 @@ import sys
 import codegen
 import subprocess
 
-if __name__ == '__main__':
-    argparser = argparse.ArgumentParser(prog='Vox Compiler',
-                                        description='Compiler for Vox, project language for METU CENG444',
-                                        epilog='')
-    argparser.add_argument('filename',
-                           help='Source file to be compiled')
-    argparser.add_argument('-o',
-                           default='a.out',
-                           help='Output binary')
-    argparser.add_argument('-c',
-                           default='',
-                           help='Output binary')
+if __name__ == "__main__":
+    argparser = argparse.ArgumentParser(
+        prog="voxc.py",
+        description="Compiler for Vox, project language for METU CENG444",
+        epilog="",
+    )
+    argparser.add_argument("filename", help="source file to be compiled")
+    argparser.add_argument("-o", default="a.out", help="output binary")
+    argparser.add_argument("-c", default="", help="output the compiled assembly code")
 
     args = argparser.parse_args()
     code = ""
@@ -25,7 +22,10 @@ if __name__ == '__main__':
             code += line
 
     intermediate = misc.process(code)
-    if misc.undeclared_vars(intermediate) != [] or misc.multiple_var_declarations(intermediate) != []:
+    if (
+        misc.undeclared_vars(intermediate) != []
+        or misc.multiple_var_declarations(intermediate) != []
+    ):
         print("Error msg")
         sys.exit()
 

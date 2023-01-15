@@ -63,31 +63,6 @@ class CodeGenerator(ASTNodeVisitor):
             return tmp in map(lambda l: l[0], self._flt_tmp_record)
         return tmp in map(lambda l: l[0], self._bool_tmp_record)
 
-    def pop_record(self, tmp=None):
-        if tmp == "float":
-            return self._flt_tmp_record.pop()
-        if tmp == "bool":
-            return self._bool_tmp_record.pop()
-
-        if tmp[0] == "f":
-            if self._flt_tmp_record[-1] != tmp:
-                return self._flt_tmp_record.pop()
-            r = None
-            for record in self._flt_tmp_record[::-1]:
-                if record != tmp:
-                    r = record
-            self._flt_tmp_record.remove(r)
-            return r
-
-        if self._bool_tmp_record[-1] != tmp:
-            return self._bool_tmp_record.pop()
-        r = None
-        for record in self._bool_tmp_record[::-1]:
-            if record != tmp:
-                r = record
-        self._bool_tmp_record.remove(r)
-        return r
-
     def visit_SLiteral(self, sliteral: SLiteral):
         label = ".S" + str(len(self.str_literals))
         self.str_literals[label] = sliteral.value
@@ -99,7 +74,7 @@ class CodeGenerator(ASTNodeVisitor):
         data = "\n\n.section .data\n"
         for elem in program.var_decls:
             loc, init = self.visit(elem)
-            data += f"{loc}: .float 0.0\n"  # TODO: Init vector
+            data += f"{loc}: .dword 0\n"
             main += init
 
         for elem in program.fun_decls:
@@ -122,13 +97,12 @@ class CodeGenerator(ASTNodeVisitor):
         return text + main + data
 
     def visit_VarDecl(self, vardecl: VarDecl):
-        # TODO
         # -- Space Allocation --
         # DONE: Determine if the var is global or not
         # DONE: If global, give it a label and store in the data section
         # DONE: Else record the position in the stack
         # -- Initialization value --
-        # TODO: Exprs will return the accumulated register
+        # DONE: Exprs will return the accumulated register
         # DONE: Move the result from register to the identifier place
         # TODO: Optimization: Determine if the var is used immediately, use the reg directly if so
 
@@ -136,40 +110,41 @@ class CodeGenerator(ASTNodeVisitor):
         location = ""
         if self._curr_scope_level == 0:
             addressing = "global"
-            location = f"glob_{vardecl.identifier.name}"
+            location = f".glob_{vardecl.identifier.name}"
         else:
             addressing = "sp"
-            location = f"{self._stack * 8}"
-            self._stack += 1
+            location = f"{8 * len(self._stack)}"
+            self._stack.append(vardecl.identifier.name)
 
         init = ""
         vec_len = 0
         t = "float"
         instr = "fsd"
         if isinstance(vardecl.initializer, List):
-            # TODO: Read vector initialization
-            # TODO: Allocate vector
-            # TODO: Iterate over initializers and put them into their indexes at the vector
             t = "vec"
             vec_len = len(vardecl.initializer)
+            init += f"vset"  # TODO: Implement vector
             for elem in vardecl.initializer:
                 reg, code = self.visit(elem)
         elif vardecl.initializer is not None:
             reg, code = self.visit(vardecl.initializer)
+            self.free_tmp(reg)
+
             init += code
             if isinstance(vardecl.initializer, LExpr):
                 t = "bool"
                 instr = "sd"
 
             if addressing == "global":
-                init += f"la t0, {location}\n{instr} {reg}, (t0)\n"
+                init += f"la a0, {location}\n"
+                init += f"{instr} {reg}, (a0)\n"
             else:
                 init += f"{instr} {reg}, {-int(location)}(sp)"
 
-        sym = Symbol(vardecl.identifier.name, addressing, t, location, vec_len)
+        sym = Symbol(vardecl.identifier.name, addressing, location, t, vec_len)
         self._symbol_table[self._curr_scope_level].append(sym)
 
-        return location, init
+        return location, init, vec_len
 
     def visit_FunDecl(self, fundecl: FunDecl):
         # TODO
@@ -186,11 +161,10 @@ class CodeGenerator(ASTNodeVisitor):
         return text
 
     def visit_Assign(self, assign: Assign):
-        # TODO
         sym = self.get_from_scope(assign.identifier.name)
         reg, code = self.visit(assign.expr)
+        self.free_tmp(reg)
 
-        code = ""
         t = "float"
         instr = "fsd"
         if isinstance(assign.expr, LExpr):
@@ -198,11 +172,11 @@ class CodeGenerator(ASTNodeVisitor):
             instr = "sd"
 
         if sym.addressing == "global":
-            code += f"la t0, {sym.location}\n{instr} {reg}, (t0)\n"
+            code += f"la t0, {sym.location}\n"
+            code += f"{instr} {reg}, (t0)\n"
         else:
             code += f"{instr} {reg}, {-int(sym.location)}(sp)"
 
-        # TODO: Change type of sym
         return code
 
     def visit_SetVector(self, setvector: SetVector):
@@ -214,15 +188,33 @@ class CodeGenerator(ASTNodeVisitor):
         self.visit(setvector.expr)
 
     def visit_ForLoop(self, forloop: ForLoop):
-        # TODO
+        init = ""
+        reg, cond = "", ""
+        incr = ""
         if forloop.initializer is not None:
-            self.visit(forloop.initializer)
+            init = self.visit(forloop.initializer)
         if forloop.condition is not None:
-            self.visit(forloop.condition)
+            reg, cond = self.visit(forloop.condition)
         if forloop.increment is not None:
-            self.visit(forloop.increment)
+            incr = self.visit(forloop.increment)
 
-        self.visit(forloop.body)
+        body = self.visit(forloop.body)
+
+        l1 = f".L{self._label_counter + 1}"
+        self._label_counter += 1
+        test_label = f".L{self._label_counter + 1}"
+        self._label_counter += 1
+
+        code = init
+        code += f"j {test_label}\n"
+        code += f"{l1}:\n"
+        code += body
+        code += incr
+        code += f"{test_label}:\n"
+        code += cond
+        code += f"bnez {reg}, {l1}\n"
+
+        return code
 
     def visit_Return(self, returnn: Return):
         # TODO
@@ -235,9 +227,23 @@ class CodeGenerator(ASTNodeVisitor):
         return code
 
     def visit_WhileLoop(self, whileloop: WhileLoop):
-        # TODO
-        self.visit(whileloop.condition)
-        self.visit(whileloop.body)
+        reg, cond = self.visit(whileloop.condition)
+        self.free_tmp(reg)
+        body = self.visit(whileloop.body)
+
+        l1 = f".L{self._label_counter + 1}"
+        self._label_counter += 1
+        test_label = f".L{self._label_counter + 1}"
+        self._label_counter += 1
+
+        code = f"j {test_label}\n"
+        code += f"{l1}:\n"
+        code += body
+        code += f"{test_label}:\n"
+        code += cond
+        code += f"bnez {reg}, {l1}\n"
+
+        return code
 
     def visit_Block(self, block: Block):
         # TODO
@@ -311,12 +317,32 @@ class CodeGenerator(ASTNodeVisitor):
         return code
 
     def visit_IfElse(self, ifelse: IfElse):
-        # TODO
-        self.visit(ifelse.condition)
-        self.visit(ifelse.if_branch)
+        reg, cond = self.visit(ifelse.condition)
+        self.free_tmp(reg)
+        if_code = self.visit(ifelse.if_branch)
 
+        else_code = ""
         if ifelse.else_branch is not None:
-            self.visit(ifelse.else_branch)
+            else_code = self.visit(ifelse.else_branch)
+
+        l1 = f".L{self._label_counter + 1}"
+        self._label_counter += 1
+
+        code = cond
+        code += f"beqz {reg}, {l1}\n"
+        code += if_code
+        if else_code:
+            l2 = f".L{self._label_counter + 1}"
+            self._label_counter += 1
+
+            code += f"j {l2}\n"
+            code += f"{l1}:\n"
+            code += else_code
+            code += f"{l2}:\n"
+        else:
+            code += f"{l1}:\n"
+
+        return code
 
     def visit_LBinary(self, lbinary: LBinary):
         lreg, lexpr = self.visit(lbinary.left)
@@ -410,11 +436,23 @@ class CodeGenerator(ASTNodeVisitor):
         return tmp, code + f"li {tmp}, {int(lliteral.value)}\n"
 
     def visit_LPrimary(self, lprimary: LPrimary):
-        preg, code = self.visit(lprimary.primary)
-        self.free_tmp(preg)
+        reg, code = self.visit(lprimary.primary)
+        if isinstance(lprimary.primary, LExpr):
+            return reg, code
+
+        self.free_tmp(reg)
 
         tmp = self.get_tmp("bool")
-        code += f"fcvt.w.d {tmp}, {preg}\n"
+        if tmp is None:
+            tmp = self._bool_tmp_record.pop(0)
+            self._stack.append(tmp)
+            code += f"addi sp, sp, -8\n"
+            code += f"sd {tmp}, (sp)\n"
+        if tmp in self._bool_tmp_record:
+            self._bool_tmp_record.remove(tmp)
+        self._bool_tmp_record.append(tmp)
+
+        code += f"fcvt.w.d {tmp}, {reg}\n"
 
         return tmp, code
 
@@ -426,9 +464,23 @@ class CodeGenerator(ASTNodeVisitor):
         self.visit(getvector.vector_index)
 
     def visit_Variable(self, variable: Variable):
-        # TODO
-        if not self.in_scope(variable.identifier.name):
-            self.undeclared_vars.append(variable.identifier)
+        sym = self.get_from_scope(variable.identifier.name)
+        tmp = self.get_tmp(sym.type)
+        code = ""
+        if sym.addressing == "global":
+            if sym.type == "float":
+                code += f"la a0, {sym.location}\n"
+                code += f"fld {tmp}, (a0)\n"
+            else:
+                code += f"la {tmp}, {sym.location}\n"
+                code += f"ld {tmp}, ({tmp})\n"
+        else:
+            if sym.type == "float":
+                code += f"fld {tmp}, {-int(sym.location)}(sp)\n"
+            else:
+                code += f"ld {tmp}, {-int(sym.location)}(sp)\n"
+
+        return tmp, code
 
     def visit_LNot(self, lnot: LNot):
         tmp, code = self.visit(lnot.right)
@@ -470,8 +522,8 @@ class CodeGenerator(ASTNodeVisitor):
         return tmp, code
 
     def visit_ALiteral(self, aliteral: ALiteral):
-        tmp = self.get_tmp("float")
         code = ""
+        tmp = self.get_tmp("float")
         if tmp is None:
             tmp = self._flt_tmp_record.pop(0)
             self._stack.append(tmp)
