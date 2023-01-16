@@ -149,7 +149,7 @@ add a0, a0, a1
 fld ft1, (a0)
 fcvt.w.d t3, ft1
 snez t3, t3
-beqz t3, .L11
+beqz t3, .L13
 addi sp, sp, -48
 li t2, 0 # 0.0
 fmv.d.x ft1, t2
@@ -250,8 +250,33 @@ li t2, 4616189618054758400 # 4.0
 fmv.d.x ft1, t2
 flt.d t4, ft0, ft1
 bnez t4, .L9
-addi sp, sp, 48
+li t2, 0 # 0.0
+fmv.d.x ft1, t2
+fsd ft1, 0(sp) # ii
+j .L12
 .L11:
+fld ft0, 0(sp)
+la a0, .glob_x
+fcvt.w.d a1, ft0
+slli a1, a1, 3
+add a0, a0, a1
+fld ft0, (a0)
+la a0, .floatformat
+fmv.x.d a1, ft0
+call printf
+fld ft0, 0(sp)
+li t2, 4607182418800017408 # 1.0
+fmv.d.x ft1, t2
+fadd.d ft0, ft0, ft1
+fsd ft0, 0(sp) # ii
+.L12:
+fld ft1, 0(sp)
+li t2, 4616189618054758400 # 4.0
+fmv.d.x ft0, t2
+flt.d t5, ft1, ft0
+bnez t5, .L11
+addi sp, sp, 48
+.L13:
 
 li a0, 0
 li a7, 93

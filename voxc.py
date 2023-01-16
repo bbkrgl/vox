@@ -12,7 +12,8 @@ if __name__ == "__main__":
     )
     argparser.add_argument("filename", help="source file to be compiled")
     argparser.add_argument("-o", default="a.out", help="output binary")
-    argparser.add_argument("-c", default="", help="output the compiled assembly code")
+    argparser.add_argument(
+        "-c", default="", help="output the compiled assembly code")
 
     args = argparser.parse_args()
     code = ""

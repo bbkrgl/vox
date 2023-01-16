@@ -1,0 +1,36 @@
+var x = [1,2,3,4,0];
+var i;
+
+for (i = 0; i < 4; i = i + 1) {
+	print x[i];
+}
+
+x[0] = 100;
+x[2] = 0;
+x[3] = true;
+
+for (i = 0; i < 4; i = i + 1) {
+	print x[i];
+}
+
+for (i = 0; i < 5; i = i + 1) {
+	print #x[i];
+}
+
+if #x[0] {
+	var ii = 0;
+	var l = [1,2,3,4,5];
+
+	if #x[1] {
+		var ii = 0;
+		var l = [5,4,3,2,1];
+
+		for (ii = 0; ii < 4; ii = ii + 1) {
+			print l[ii];
+		}
+	}
+
+	for (ii = 0; ii < 4; ii = ii + 1) {
+		print l[ii];
+	}
+}

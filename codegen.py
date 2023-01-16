@@ -19,6 +19,7 @@ class CodeGenerator(ASTNodeVisitor):
         self._curr_scope_level = 0
         self._funs = []
         self._stack = []
+        self._stack_record = []
         self._saved_regs = []
         self._fun_vars = []
         self.str_literals = {}
@@ -32,7 +33,7 @@ class CodeGenerator(ASTNodeVisitor):
         self.code = self.visit(source)
 
     def get_from_scope(self, var):
-        for scope in self._symbol_table:
+        for scope in self._symbol_table[::-1]:
             for sym in scope:
                 if sym.name == var:
                     return sym
@@ -73,8 +74,8 @@ class CodeGenerator(ASTNodeVisitor):
         main = "main:\n"
         data = "\n\n.section .data\n"
         for elem in program.var_decls:
-            loc, init = self.visit(elem)
-            data += f"{loc}: .dword 0\n"
+            sym, init = self.visit(elem)
+            data += f"{sym.location}: .dword 0{str('0'.join([','] * (sym.vector_len)))[:-1]}\n"
             main += init
 
         for elem in program.fun_decls:
@@ -97,15 +98,6 @@ class CodeGenerator(ASTNodeVisitor):
         return text + main + data
 
     def visit_VarDecl(self, vardecl: VarDecl):
-        # -- Space Allocation --
-        # DONE: Determine if the var is global or not
-        # DONE: If global, give it a label and store in the data section
-        # DONE: Else record the position in the stack
-        # -- Initialization value --
-        # DONE: Exprs will return the accumulated register
-        # DONE: Move the result from register to the identifier place
-        # TODO: Optimization: Determine if the var is used immediately, use the reg directly if so
-
         addressing = ""
         location = ""
         if self._curr_scope_level == 0:
@@ -117,34 +109,51 @@ class CodeGenerator(ASTNodeVisitor):
             self._stack.append(vardecl.identifier.name)
 
         init = ""
-        vec_len = 0
         t = "float"
-        instr = "fsd"
+        vec_len = 0
         if isinstance(vardecl.initializer, List):
             t = "vec"
             vec_len = len(vardecl.initializer)
-            init += f"vset"  # TODO: Implement vector
-            for elem in vardecl.initializer:
+            if addressing == "global":
+                init += f"la a0, {location}\n"
+            else:
+                self._stack.pop()
+
+            for i, elem in enumerate(vardecl.initializer):
                 reg, code = self.visit(elem)
+                self.free_tmp(reg)
+
+                init += code
+                if isinstance(elem, LExpr):
+                    init += f"fcvt.d.w fa0, {reg}\n"
+                    reg = "fa0"
+
+                if addressing == "global":
+                    init += f"fsd {reg}, {8 * i}(a0)\n"
+                else:
+                    self._stack.append(f"{vardecl.identifier.name}[{i}]")
+                    init += f"fsd {reg}, {int(location) + 8 * i}(sp)\n"
+
         elif vardecl.initializer is not None:
             reg, code = self.visit(vardecl.initializer)
             self.free_tmp(reg)
 
             init += code
             if isinstance(vardecl.initializer, LExpr):
-                t = "bool"
-                instr = "sd"
+                init += f"fcvt.d.w fa0, {reg}\n"
+                reg = "fa0"
 
             if addressing == "global":
                 init += f"la a0, {location}\n"
-                init += f"{instr} {reg}, (a0)\n"
+                init += f"fsd {reg}, (a0)\n"
             else:
-                init += f"{instr} {reg}, {-int(location)}(sp)"
+                init += f"fsd {reg}, {int(location)}(sp)\n"
 
-        sym = Symbol(vardecl.identifier.name, addressing, location, t, vec_len)
+        sym = Symbol(vardecl.identifier.name, addressing,
+                     location, t, vec_len)
         self._symbol_table[self._curr_scope_level].append(sym)
 
-        return location, init, vec_len
+        return sym, init
 
     def visit_FunDecl(self, fundecl: FunDecl):
         # TODO
@@ -165,27 +174,44 @@ class CodeGenerator(ASTNodeVisitor):
         reg, code = self.visit(assign.expr)
         self.free_tmp(reg)
 
-        t = "float"
         instr = "fsd"
         if isinstance(assign.expr, LExpr):
-            t = "bool"
             instr = "sd"
 
         if sym.addressing == "global":
             code += f"la t0, {sym.location}\n"
-            code += f"{instr} {reg}, (t0)\n"
+            code += f"{instr} {reg}, (t0) # {assign.identifier.name}\n"
         else:
-            code += f"{instr} {reg}, {-int(sym.location)}(sp)"
+            code += f"{instr} {reg}, {-int(sym.location)}(sp) # {assign.identifier.name}\n"
 
         return code
 
     def visit_SetVector(self, setvector: SetVector):
-        # TODO
-        if not self.in_scope(setvector.identifier.name):
-            self.undeclared_vars.append(setvector.identifier)
+        sym = self.get_from_scope(setvector.identifier.name)
+        index_reg, index_expr = self.visit(setvector.vector_index)
+        expr_reg, expr = self.visit(setvector.expr)
+        self.free_tmp(index_reg)
+        self.free_tmp(expr_reg)
 
-        self.visit(setvector.vector_index)
-        self.visit(setvector.expr)
+        code = index_expr
+        if sym.addressing == "global":
+            code += f"la a0, {sym.location}\n"
+            code += f"fcvt.w.d a1, {index_reg}\n"
+            code += f"slli a1, a1, 3\n"
+            code += f"add a0, a0, a1\n"
+        else:
+            code += f"fcvt.w.d a1, {index_reg}\n"
+            code += f"slli a1, a1, 3\n"
+            code += f"add a0, sp, a1\n"
+
+        code += expr
+        if isinstance(setvector.expr, LExpr):
+            code += f"fcvt.d.w fa0, {expr_reg}\n"
+            expr_reg = "fa0"
+
+        code += f"fsd {expr_reg}, (a0)\n"
+
+        return code
 
     def visit_ForLoop(self, forloop: ForLoop):
         init = ""
@@ -200,9 +226,9 @@ class CodeGenerator(ASTNodeVisitor):
 
         body = self.visit(forloop.body)
 
-        l1 = f".L{self._label_counter + 1}"
+        l1 = f".L{self._label_counter}"
         self._label_counter += 1
-        test_label = f".L{self._label_counter + 1}"
+        test_label = f".L{self._label_counter}"
         self._label_counter += 1
 
         code = init
@@ -220,9 +246,11 @@ class CodeGenerator(ASTNodeVisitor):
         # TODO
         reg, code = self.visit(returnn.expr)
         if isinstance(returnn.expr, LExpr) or isinstance(returnn.expr, SLiteral):
-            code += f"mv a0, {reg}\nret\n"
+            code += f"mv a0, {reg}\n"
+            code += "ret\n"
         else:  # TODO: Check
-            code += f"mv fa0, {reg}\nret\n"
+            code += f"mv fa0, {reg}\n"
+            code += "ret\n"
 
         return code
 
@@ -231,9 +259,9 @@ class CodeGenerator(ASTNodeVisitor):
         self.free_tmp(reg)
         body = self.visit(whileloop.body)
 
-        l1 = f".L{self._label_counter + 1}"
+        l1 = f".L{self._label_counter}"
         self._label_counter += 1
-        test_label = f".L{self._label_counter + 1}"
+        test_label = f".L{self._label_counter}"
         self._label_counter += 1
 
         code = f"j {test_label}\n"
@@ -246,53 +274,50 @@ class CodeGenerator(ASTNodeVisitor):
         return code
 
     def visit_Block(self, block: Block):
-        # TODO
-        # DONE: Allocate space for old used registers
-        # DONE: Allocate space for parameters (if num_param>7)
-        # DONE: Allocate space for locals
-        # DONE: Add body code
-        # DONE: Restore old registers
-        # DONE: Deallocate stack
-        # DONE: Return to ra
-
         self._symbol_table.append([])
+        self._stack_record.append(self._stack)
+        self._stack = []
         self._curr_scope_level += 1
 
         stack_size = (
-            len(block.var_decls) + len(self._saved_regs) +
-            len(self._fun_vars[8:])
+            len(self._saved_regs) + len(self._fun_vars[8:])
         )
-
-        text = ""
-        if stack_size != 0:
-            text += f"\tsubi sp, sp, {stack_size * 8}\n"
 
         # TODO: Fix num_params > 7
         for identifier in self._fun_vars[8:]:
             # TODO: Change type
             sym = Symbol(identifier.name, "sp",
                          f"{self._stack * 8}", "float", 0)
-            self._stack += 1
+            self._stack.append(sym)
             self._symbol_table[self._curr_scope_level].append(sym)
 
         reg_pos = []
+        code = ""
         for reg in self._saved_regs:
-            text += f"\tsd {reg}, ({self._stack})sp\n"
-            reg_pos.append((reg, self._stack))
-            self._stack += 1
+            code += f"sd {reg}, {8 * len(self._stack)}(sp)\n"
+            self._stack.append(reg)
 
         for elem in block.var_decls:
-            location, init = self.visit(elem)
-            text += init
+            sym, init = self.visit(elem)
+            stack_size += 1 if sym.vector_len == 0 else sym.vector_len
+            code += init
+
+        text = ""
+        if stack_size != 0:
+            text += f"addi sp, sp, -{stack_size * 8}\n"
 
         for elem in block.statements:
-            text += self.visit(elem)
+            code += self.visit(elem)
 
         for reg, pos in reg_pos:
-            text += f"\tld {reg}, ({pos * 8})(sp)\n"
+            code += f"ld {reg}, ({pos * 8})(sp)\n"
 
-        text += f"\taddi sp, sp, {stack_size * 8}\n"
+        if stack_size != 0:
+            code += f"addi sp, sp, {stack_size * 8}\n"
 
+        text += code
+
+        self._stack = self._stack_record.pop()
         self._fun_vars = []
         self._symbol_table = self._symbol_table[:-1]
         self._curr_scope_level -= 1
@@ -325,14 +350,14 @@ class CodeGenerator(ASTNodeVisitor):
         if ifelse.else_branch is not None:
             else_code = self.visit(ifelse.else_branch)
 
-        l1 = f".L{self._label_counter + 1}"
+        l1 = f".L{self._label_counter}"
         self._label_counter += 1
 
         code = cond
         code += f"beqz {reg}, {l1}\n"
         code += if_code
         if else_code:
-            l2 = f".L{self._label_counter + 1}"
+            l2 = f".L{self._label_counter}"
             self._label_counter += 1
 
             code += f"j {l2}\n"
@@ -437,9 +462,6 @@ class CodeGenerator(ASTNodeVisitor):
 
     def visit_LPrimary(self, lprimary: LPrimary):
         reg, code = self.visit(lprimary.primary)
-        if isinstance(lprimary.primary, LExpr):
-            return reg, code
-
         self.free_tmp(reg)
 
         tmp = self.get_tmp("bool")
@@ -453,32 +475,38 @@ class CodeGenerator(ASTNodeVisitor):
         self._bool_tmp_record.append(tmp)
 
         code += f"fcvt.w.d {tmp}, {reg}\n"
+        code += f"snez {tmp}, {tmp}\n"
 
         return tmp, code
 
     def visit_GetVector(self, getvector: GetVector):
-        # TODO
-        if not self.in_scope(getvector.identifier.name):
-            self.undeclared_vars.append(getvector.identifier)
+        sym = self.get_from_scope(getvector.identifier.name)
+        reg, expr = self.visit(getvector.vector_index)
 
-        self.visit(getvector.vector_index)
+        code = expr
+        if sym.addressing == "global":
+            code += f"la a0, {sym.location}\n"
+            code += f"fcvt.w.d a1, {reg}\n"
+            code += f"slli a1, a1, 3\n"
+        else:
+            code += f"fcvt.w.d a1, {reg}\n"
+            code += f"slli a1, a1, 3\n"
+            code += f"addi a0, sp, {int(sym.location)}\n"
+
+        code += f"add a0, a0, a1\n"
+        code += f"fld {reg}, (a0)\n"
+        return reg, code
 
     def visit_Variable(self, variable: Variable):
         sym = self.get_from_scope(variable.identifier.name)
-        tmp = self.get_tmp(sym.type)
+        tmp = self.get_tmp("float")
+        # TODO
         code = ""
         if sym.addressing == "global":
-            if sym.type == "float":
-                code += f"la a0, {sym.location}\n"
-                code += f"fld {tmp}, (a0)\n"
-            else:
-                code += f"la {tmp}, {sym.location}\n"
-                code += f"ld {tmp}, ({tmp})\n"
+            code += f"la a0, {sym.location}\n"
+            code += f"fld {tmp}, (a0)\n"
         else:
-            if sym.type == "float":
-                code += f"fld {tmp}, {-int(sym.location)}(sp)\n"
-            else:
-                code += f"ld {tmp}, {-int(sym.location)}(sp)\n"
+            code += f"fld {tmp}, {int(sym.location)}(sp)\n"
 
         return tmp, code
 
