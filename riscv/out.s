@@ -27,6 +27,10 @@ la t0, .glob_i
 fsd ft0, (t0) # i
 j .L1
 .L0:
+addi sp, sp, -24
+fsd ft1, 0(sp)
+fsd ft0, 8(sp)
+sd t0, 16(sp)
 la a0, .glob_i
 fld ft1, (a0)
 la a0, .glob_x
@@ -37,6 +41,10 @@ fld ft1, (a0)
 la a0, .floatformat
 fmv.x.d a1, ft1
 call printf
+fld ft1, 0(sp)
+fld ft0, 8(sp)
+ld t0, 16(sp)
+addi sp, sp, 24
 la a0, .glob_i
 fld ft1, (a0)
 li t2, 4607182418800017408 # 1.0
@@ -84,6 +92,11 @@ la t0, .glob_i
 fsd ft1, (t0) # i
 j .L3
 .L2:
+addi sp, sp, -32
+fsd ft0, 0(sp)
+fsd ft1, 8(sp)
+sd t0, 16(sp)
+sd t1, 24(sp)
 la a0, .glob_i
 fld ft0, (a0)
 la a0, .glob_x
@@ -94,6 +107,11 @@ fld ft0, (a0)
 la a0, .floatformat
 fmv.x.d a1, ft0
 call printf
+fld ft0, 0(sp)
+fld ft1, 8(sp)
+ld t0, 16(sp)
+ld t1, 24(sp)
+addi sp, sp, 32
 la a0, .glob_i
 fld ft0, (a0)
 li t2, 4607182418800017408 # 1.0
@@ -114,6 +132,12 @@ la t0, .glob_i
 fsd ft0, (t0) # i
 j .L5
 .L4:
+addi sp, sp, -40
+fsd ft1, 0(sp)
+fsd ft0, 8(sp)
+sd t0, 16(sp)
+sd t1, 24(sp)
+sd t2, 32(sp)
 la a0, .glob_i
 fld ft1, (a0)
 la a0, .glob_x
@@ -123,9 +147,15 @@ add a0, a0, a1
 fld ft1, (a0)
 fcvt.w.d t3, ft1
 snez t3, t3
-la a0, .boolformat
+la a0, .intformat
 mv a1, t3
 call printf
+fld ft1, 0(sp)
+fld ft0, 8(sp)
+ld t0, 16(sp)
+ld t1, 24(sp)
+ld t2, 32(sp)
+addi sp, sp, 40
 la a0, .glob_i
 fld ft1, (a0)
 li t2, 4607182418800017408 # 1.0
@@ -150,133 +180,206 @@ fld ft1, (a0)
 fcvt.w.d t3, ft1
 snez t3, t3
 beqz t3, .L13
-addi sp, sp, -48
+addi sp, sp, -120
+fsd ft0, 0(sp)
+fsd ft1, 8(sp)
+sd t0, 16(sp)
+sd t1, 24(sp)
+sd t2, 32(sp)
+sd t3, 40(sp)
 li t2, 0 # 0.0
 fmv.d.x ft1, t2
-fsd ft1, 0(sp)
+fsd ft1, 48(sp)
 li t2, 4607182418800017408 # 1.0
 fmv.d.x ft1, t2
-fsd ft1, 8(sp)
+fsd ft1, 56(sp)
 li t2, 4611686018427387904 # 2.0
 fmv.d.x ft1, t2
-fsd ft1, 16(sp)
+fsd ft1, 64(sp)
 li t2, 4613937818241073152 # 3.0
 fmv.d.x ft1, t2
-fsd ft1, 24(sp)
+fsd ft1, 72(sp)
 li t2, 4616189618054758400 # 4.0
 fmv.d.x ft1, t2
-fsd ft1, 32(sp)
+fsd ft1, 80(sp)
 li t2, 4617315517961601024 # 5.0
 fmv.d.x ft1, t2
-fsd ft1, 40(sp)
+fsd ft1, 88(sp)
+li t2, 4609434218613702656 # 1.5
+fmv.d.x ft1, t2
+fsd ft1, 96(sp)
+li t2, 4620693217682128896 # 8.0
+fmv.d.x ft1, t2
+fsd ft1, 104(sp)
+li t2, 4621819117588971520 # 10.0
+fmv.d.x ft1, t2
+fsd ft1, 112(sp)
+fld ft1, 112(sp)
+la a0, .floatformat
+fmv.x.d a1, ft1
+call printf
 li t2, 4607182418800017408 # 1.0
 fmv.d.x ft1, t2
-la a0, .glob_x
 fcvt.w.d a1, ft1
 slli a1, a1, 3
+addi a0, sp, 96
 add a0, a0, a1
 fld ft1, (a0)
 fcvt.w.d t3, ft1
 snez t3, t3
-beqz t3, .L8
-addi sp, sp, -48
-li t2, 0 # 0.0
-fmv.d.x ft1, t2
+beqz t3, .L10
+addi sp, sp, -64
 fsd ft1, 0(sp)
-li t2, 4617315517961601024 # 5.0
-fmv.d.x ft1, t2
-fsd ft1, 8(sp)
-li t2, 4616189618054758400 # 4.0
+sd t3, 8(sp)
+li t2, 0 # 0.0
 fmv.d.x ft1, t2
 fsd ft1, 16(sp)
-li t2, 4613937818241073152 # 3.0
+li t2, 4617315517961601024 # 5.0
 fmv.d.x ft1, t2
 fsd ft1, 24(sp)
-li t2, 4611686018427387904 # 2.0
+li t2, 4616189618054758400 # 4.0
 fmv.d.x ft1, t2
 fsd ft1, 32(sp)
-li t2, 4607182418800017408 # 1.0
+li t2, 4613937818241073152 # 3.0
 fmv.d.x ft1, t2
 fsd ft1, 40(sp)
+li t2, 4611686018427387904 # 2.0
+fmv.d.x ft1, t2
+fsd ft1, 48(sp)
+li t2, 4607182418800017408 # 1.0
+fmv.d.x ft1, t2
+fsd ft1, 56(sp)
+li t2, 4626322717216342016 # 20.0
+fmv.d.x ft1, t2
+fsd ft1, 176(sp) # y
+fld ft1, 176(sp)
+la a0, .floatformat
+fmv.x.d a1, ft1
+call printf
 li t2, 0 # 0.0
 fmv.d.x ft1, t2
-fsd ft1, 0(sp) # ii
+fsd ft1, 16(sp) # ii
 j .L7
 .L6:
-fld ft0, 0(sp)
+addi sp, sp, -24
+fsd ft0, 0(sp)
+fsd ft1, 8(sp)
+sd t3, 16(sp)
+fld ft0, 40(sp)
 fcvt.w.d a1, ft0
 slli a1, a1, 3
-addi a0, sp, 8
+addi a0, sp, 184
 add a0, a0, a1
 fld ft0, (a0)
 la a0, .floatformat
 fmv.x.d a1, ft0
 call printf
 fld ft0, 0(sp)
+fld ft1, 8(sp)
+ld t3, 16(sp)
+addi sp, sp, 24
+fld ft0, 16(sp)
 li t2, 4607182418800017408 # 1.0
 fmv.d.x ft1, t2
 fadd.d ft0, ft0, ft1
-fsd ft0, 0(sp) # ii
+fsd ft0, 16(sp) # ii
 .L7:
-fld ft1, 0(sp)
-li t2, 4616189618054758400 # 4.0
+fld ft1, 16(sp)
+li t2, 4611686018427387904 # 2.0
 fmv.d.x ft0, t2
 flt.d t3, ft1, ft0
 bnez t3, .L6
-addi sp, sp, 48
-.L8:
 li t2, 0 # 0.0
 fmv.d.x ft0, t2
-fsd ft0, 0(sp) # ii
-j .L10
-.L9:
-fld ft1, 0(sp)
+fsd ft0, 16(sp) # ii
+j .L9
+.L8:
+addi sp, sp, -32
+fsd ft1, 0(sp)
+fsd ft0, 8(sp)
+sd t3, 16(sp)
+sd t4, 24(sp)
+fld ft1, 48(sp)
 fcvt.w.d a1, ft1
 slli a1, a1, 3
-addi a0, sp, 8
+addi a0, sp, 56
 add a0, a0, a1
 fld ft1, (a0)
 la a0, .floatformat
 fmv.x.d a1, ft1
 call printf
 fld ft1, 0(sp)
+fld ft0, 8(sp)
+ld t3, 16(sp)
+ld t4, 24(sp)
+addi sp, sp, 32
+fld ft1, 16(sp)
 li t2, 4607182418800017408 # 1.0
 fmv.d.x ft0, t2
 fadd.d ft1, ft1, ft0
-fsd ft1, 0(sp) # ii
-.L10:
-fld ft0, 0(sp)
+fsd ft1, 16(sp) # ii
+.L9:
+fld ft0, 16(sp)
 li t2, 4616189618054758400 # 4.0
 fmv.d.x ft1, t2
 flt.d t4, ft0, ft1
-bnez t4, .L9
+bnez t4, .L8
+fld ft1, 0(sp)
+ld t3, 8(sp)
+addi sp, sp, 64
+.L10:
 li t2, 0 # 0.0
 fmv.d.x ft1, t2
-fsd ft1, 0(sp) # ii
+fsd ft1, 48(sp) # ii
 j .L12
 .L11:
-fld ft0, 0(sp)
-la a0, .glob_x
+addi sp, sp, -32
+fsd ft0, 0(sp)
+fsd ft1, 8(sp)
+sd t3, 16(sp)
+sd t5, 24(sp)
+fld ft0, 80(sp)
 fcvt.w.d a1, ft0
 slli a1, a1, 3
+addi a0, sp, 88
 add a0, a0, a1
 fld ft0, (a0)
 la a0, .floatformat
 fmv.x.d a1, ft0
 call printf
 fld ft0, 0(sp)
+fld ft1, 8(sp)
+ld t3, 16(sp)
+ld t5, 24(sp)
+addi sp, sp, 32
+fld ft0, 48(sp)
 li t2, 4607182418800017408 # 1.0
 fmv.d.x ft1, t2
 fadd.d ft0, ft0, ft1
-fsd ft0, 0(sp) # ii
+fsd ft0, 48(sp) # ii
 .L12:
-fld ft1, 0(sp)
+fld ft1, 48(sp)
 li t2, 4616189618054758400 # 4.0
 fmv.d.x ft0, t2
 flt.d t5, ft1, ft0
 bnez t5, .L11
-addi sp, sp, 48
+fld ft0, 112(sp)
+la a0, .floatformat
+fmv.x.d a1, ft0
+call printf
+fld ft0, 0(sp)
+fld ft1, 8(sp)
+ld t0, 16(sp)
+ld t1, 24(sp)
+ld t2, 32(sp)
+ld t3, 40(sp)
+addi sp, sp, 120
 .L13:
+la a0, .glob_x
+fld ft0, (a0)
+la a0, .floatformat
+fmv.x.d a1, ft0
+call printf
 
 li a0, 0
 li a7, 93
@@ -287,5 +390,5 @@ ecall
 .glob_x: .dword 0,0,0,0,0
 .glob_i: .dword 0
 .strformat: .string "%s\n"
-.boolformat: .string "%d\n"
+.intformat: .string "%d\n"
 .floatformat: .string "%f\n"

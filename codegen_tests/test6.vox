@@ -1,0 +1,20 @@
+var x = 10;
+
+fun y(a, b, c, d)
+{
+	if a > 0 {
+		print a;
+	}
+	print b;
+	print c;
+	a = 3;
+	print a;
+	print b;
+	print c;
+
+	return x;
+}
+
+print x;
+x = y(1, 2, 3, 4);
+print x;

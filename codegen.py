@@ -15,9 +15,11 @@ class CodeGenerator(ASTNodeVisitor):
     def __init__(self, source):
         super().__init__()
 
-        self._symbol_table = [[]]
+        self._symbol_table = [[[], 0]]
+        self._actual_params = []
         self._curr_scope_level = 0
         self._funs = []
+        self._return_reg_load = []
         self._stack = []
         self._stack_record = []
         self._saved_regs = []
@@ -25,26 +27,28 @@ class CodeGenerator(ASTNodeVisitor):
         self.str_literals = {}
 
         self._flt_tmps = [f"ft{i}" for i in range(7, -1, -1)]
-        self._bool_tmps = [f"t{i}" for i in range(7, -1, -1)]
+        self._int_tmps = [f"t{i}" for i in range(7, -1, -1)]
         self._flt_tmp_record = []
-        self._bool_tmp_record = []
+        self._int_tmp_record = []
         self._label_counter = 0
 
         self.code = self.visit(source)
 
     def get_from_scope(self, var):
-        for scope in self._symbol_table[::-1]:
+        offset = 0
+        for scope, o in self._symbol_table[::-1]:
             for sym in scope:
                 if sym.name == var:
-                    return sym
+                    return sym, offset
+            offset += o
 
         return None
 
     def get_tmp(self, t):
         if t == "float" and self._flt_tmps != []:
             return self._flt_tmps.pop()
-        elif t == "bool" and self._bool_tmps != []:
-            return self._bool_tmps.pop()
+        elif (t == "int" or t == "bool") and self._int_tmps != []:
+            return self._int_tmps.pop()
         return None
 
     def free_tmp(self, tmp):
@@ -54,15 +58,15 @@ class CodeGenerator(ASTNodeVisitor):
                 i = list(map(lambda l: l[0], self._flt_tmp_record)).index(tmp)
                 del self._flt_tmp_record[i]
         else:
-            self._bool_tmps.append(tmp)
+            self._int_tmps.append(tmp)
             if self.is_recorded(tmp):
-                i = list(map(lambda l: l[0], self._bool_tmp_record)).index(tmp)
-                del self._bool_tmp_record[i]
+                i = list(map(lambda l: l[0], self._int_tmp_record)).index(tmp)
+                del self._int_tmp_record[i]
 
     def is_recorded(self, tmp):
         if tmp[0] == "f":
             return tmp in map(lambda l: l[0], self._flt_tmp_record)
-        return tmp in map(lambda l: l[0], self._bool_tmp_record)
+        return tmp in map(lambda l: l[0], self._int_tmp_record)
 
     def visit_SLiteral(self, sliteral: SLiteral):
         label = ".S" + str(len(self.str_literals))
@@ -92,7 +96,7 @@ class CodeGenerator(ASTNodeVisitor):
             data += f'{key}: .string "{strl}"\n'
 
         data += '.strformat: .string "%s\\n"\n'
-        data += '.boolformat: .string "%d\\n"\n'
+        data += '.intformat: .string "%d\\n"\n'
         data += '.floatformat: .string "%f\\n"\n'
 
         return text + main + data
@@ -149,28 +153,25 @@ class CodeGenerator(ASTNodeVisitor):
             else:
                 init += f"fsd {reg}, {int(location)}(sp)\n"
 
-        sym = Symbol(vardecl.identifier.name, addressing,
-                     location, t, vec_len)
-        self._symbol_table[self._curr_scope_level].append(sym)
+        sym = Symbol(vardecl.identifier.name, addressing, location, t, vec_len)
+        self._symbol_table[self._curr_scope_level][0].append(sym)
 
         return sym, init
 
     def visit_FunDecl(self, fundecl: FunDecl):
-        # TODO
         self._funs.append(fundecl.identifier.name)
         self._fun_vars = [elem for elem in fundecl.params]
-        self._stack = 0
 
-        # DONE: Add function label
-        # DONE: Return the code taken from the block
-
+        self._saved_regs.append("ra")
         text = f"{fundecl.identifier.name}:\n"
         text += self.visit(fundecl.body)
+        text += "li a0, 0\n"
+        text += "ret\n"
 
         return text
 
     def visit_Assign(self, assign: Assign):
-        sym = self.get_from_scope(assign.identifier.name)
+        sym, offset = self.get_from_scope(assign.identifier.name)
         reg, code = self.visit(assign.expr)
         self.free_tmp(reg)
 
@@ -182,12 +183,16 @@ class CodeGenerator(ASTNodeVisitor):
             code += f"la t0, {sym.location}\n"
             code += f"{instr} {reg}, (t0) # {assign.identifier.name}\n"
         else:
-            code += f"{instr} {reg}, {-int(sym.location)}(sp) # {assign.identifier.name}\n"
+            if sym.type == "param":
+                location = int(sym.location.split("/")[1])
+            else:
+                location = int(sym.location)
+            code += f"{instr} {reg}, {location + offset}(sp) # {assign.identifier.name}\n"
 
         return code
 
     def visit_SetVector(self, setvector: SetVector):
-        sym = self.get_from_scope(setvector.identifier.name)
+        sym, offset = self.get_from_scope(setvector.identifier.name)
         index_reg, index_expr = self.visit(setvector.vector_index)
         expr_reg, expr = self.visit(setvector.expr)
         self.free_tmp(index_reg)
@@ -203,6 +208,8 @@ class CodeGenerator(ASTNodeVisitor):
             code += f"fcvt.w.d a1, {index_reg}\n"
             code += f"slli a1, a1, 3\n"
             code += f"add a0, sp, a1\n"
+            if offset != 0:
+                code += f"addi a0, {offset}\n"
 
         code += expr
         if isinstance(setvector.expr, LExpr):
@@ -243,14 +250,28 @@ class CodeGenerator(ASTNodeVisitor):
         return code
 
     def visit_Return(self, returnn: Return):
-        # TODO
         reg, code = self.visit(returnn.expr)
         if isinstance(returnn.expr, LExpr) or isinstance(returnn.expr, SLiteral):
             code += f"mv a0, {reg}\n"
-            code += "ret\n"
-        else:  # TODO: Check
-            code += f"mv fa0, {reg}\n"
-            code += "ret\n"
+        else:
+            code += f"fmv.x.d a0, {reg}\n"
+       
+        """
+        reg_load = ""
+        print(self._return_reg_load)
+        for i, reg in enumerate(self._return_reg_load):
+            if reg[0] == "f":
+                if reg[1] == "a":
+                    continue
+                reg_load += f"fld {reg}, {8 * i}(sp)\n"
+            else:
+                if reg[0] == "a":
+                    continue
+                reg_load += f"ld {reg}, {8 * i}(sp)\n"
+        code += reg_load
+        """
+        code += "ld ra, 0(sp)\n" # TODO: Check if ra is always at 0(sp)
+        code += "ret\n"
 
         return code
 
@@ -274,64 +295,108 @@ class CodeGenerator(ASTNodeVisitor):
         return code
 
     def visit_Block(self, block: Block):
-        self._symbol_table.append([])
-        self._stack_record.append(self._stack)
+        self._symbol_table.append([[], 0])
+        self._stack_record.append(
+            (self._stack, self._flt_tmp_record, self._int_tmp_record)
+        )
         self._stack = []
+        saved_regs = self._saved_regs[:]
+        saved_regs += self._flt_tmp_record + self._int_tmp_record
+        self._flt_tmp_record = []
+        self._int_tmp_record = []
         self._curr_scope_level += 1
 
-        stack_size = (
-            len(self._saved_regs) + len(self._fun_vars[8:])
-        )
+        stack_size = len(saved_regs) + len(self._fun_vars)
+        for elem in block.var_decls:
+            if elem.initializer is not None:
+                if isinstance(elem.initializer, List):
+                    stack_size += len(elem.initializer)
+                else:
+                    stack_size += 1
 
-        # TODO: Fix num_params > 7
-        for identifier in self._fun_vars[8:]:
-            # TODO: Change type
-            sym = Symbol(identifier.name, "sp",
-                         f"{self._stack * 8}", "float", 0)
+        stack_size *= 8
+        self._symbol_table[self._curr_scope_level][1] = stack_size
+
+        reg_save = ""
+        for reg in saved_regs:
+            if reg[0] == "f":
+                reg_save += f"fsd {reg}, {8 * len(self._stack)}(sp)\n"
+            else:
+                reg_save += f"sd {reg}, {8 * len(self._stack)}(sp)\n"
+            self._stack.append(f"saved_{reg}")
+
+        saved_args = []
+        for i, identifier in enumerate(self._fun_vars):
+            if i < 7:
+                sym = Symbol(
+                    identifier.name, "reg", f"a{i}/{8 * len(self._stack)}", "param", 0
+                )
+            else:
+                # TODO: Place of arg > 7 should be set from the caller
+                sym = Symbol(
+                    identifier.name, "sp", f"{8 * len(self._stack)}", "param", 0
+                )
             self._stack.append(sym)
-            self._symbol_table[self._curr_scope_level].append(sym)
+            saved_args.append(sym)
+            self._symbol_table[self._curr_scope_level][0].append(sym)
+            self._actual_params.append(sym)
 
-        reg_pos = []
+        for sym in saved_args:
+            if sym.addressing == "reg":
+                reg_save += f"sd {sym.location.split('/')[0]}, {sym.location.split('/')[1]}(sp)\n"
+
         code = ""
-        for reg in self._saved_regs:
-            code += f"sd {reg}, {8 * len(self._stack)}(sp)\n"
-            self._stack.append(reg)
-
         for elem in block.var_decls:
             sym, init = self.visit(elem)
-            stack_size += 1 if sym.vector_len == 0 else sym.vector_len
             code += init
-
-        text = ""
+    
+        stack_init = ""
         if stack_size != 0:
-            text += f"addi sp, sp, -{stack_size * 8}\n"
+            stack_init += f"addi sp, sp, -{stack_size}\n"
 
+        # self._return_reg_load = saved_regs
         for elem in block.statements:
             code += self.visit(elem)
 
-        for reg, pos in reg_pos:
-            code += f"ld {reg}, ({pos * 8})(sp)\n"
+        reg_load = ""
+        for i, reg in enumerate(saved_regs):
+            if reg[0] == "f":
+                if reg[1] == "a":
+                    continue
+                reg_load += f"fld {reg}, {8 * i}(sp)\n"
+            else:
+                if reg[0] == "a":
+                    continue
+                reg_load += f"ld {reg}, {8 * i}(sp)\n"
 
         if stack_size != 0:
-            code += f"addi sp, sp, {stack_size * 8}\n"
+            reg_load += f"addi sp, sp, {stack_size}\n"
 
-        text += code
+        code = stack_init + reg_save + code + reg_load
 
-        self._stack = self._stack_record.pop()
+        (
+            self._stack,
+            self._flt_tmp_record,
+            self._int_tmp_record,
+        ) = self._stack_record.pop()
         self._fun_vars = []
+        self._saved_regs = []
+        self._actual_params = []
         self._symbol_table = self._symbol_table[:-1]
         self._curr_scope_level -= 1
 
-        return text
+        return code
 
     def visit_Print(self, printt: Print):
         reg, code = self.visit(printt.expr)
+        for i in range(len(self._actual_params)):
+            self._actual_params[i].addressing = "sp"
         if isinstance(printt.expr, AExpr):
             code += f"la a0, .floatformat\n"
             code += f"fmv.x.d a1, {reg}\n"
             self.free_tmp(reg)
         elif isinstance(printt.expr, LExpr):
-            code += f"la a0, .boolformat\n"
+            code += f"la a0, .intformat\n"
             code += f"mv a1, {reg}\n"
             self.free_tmp(reg)
         elif isinstance(printt.expr, SLiteral):
@@ -382,15 +447,15 @@ class CodeGenerator(ASTNodeVisitor):
 
         code += rexpr
         if self._stack != [] and self._stack[-1] == lreg:
-            if lreg in self._bool_tmps:
-                self._bool_tmps.remove(lreg)
+            if lreg in self._int_tmps:
+                self._int_tmps.remove(lreg)
 
             code += f"ld {lreg}, (sp)\n"
             code += f"addi sp, sp, 8\n"
             self._stack.pop()
-            if lreg in self._bool_tmp_record:
-                self._bool_tmp_record.remove(lreg)
-            self._bool_tmp_record.append(lreg)
+            if lreg in self._int_tmp_record:
+                self._int_tmp_record.remove(lreg)
+            self._int_tmp_record.append(lreg)
 
         if lbinary.op == "or":
             code += f"or {lreg}, {lreg}, {rreg}\n"
@@ -422,13 +487,13 @@ class CodeGenerator(ASTNodeVisitor):
 
         tmp = self.get_tmp("bool")
         if tmp is None:
-            tmp = self._bool_tmp_record.pop(0)
+            tmp = self._int_tmp_record.pop(0)
             self._stack.append(tmp)
             code += f"addi sp, sp, -8\n"
             code += f"sd {tmp}, (sp)\n"
-        if tmp in self._bool_tmp_record:
-            self._bool_tmp_record.remove(tmp)
-        self._bool_tmp_record.append(tmp)
+        if tmp in self._int_tmp_record:
+            self._int_tmp_record.remove(tmp)
+        self._int_tmp_record.append(tmp)
 
         if comparison.op == "<":
             code += f"flt.d {tmp}, {lreg}, {rreg}\n"
@@ -450,13 +515,13 @@ class CodeGenerator(ASTNodeVisitor):
         tmp = self.get_tmp("bool")
         code = ""
         if tmp is None:
-            tmp = self._bool_tmp_record.pop(0)
+            tmp = self._int_tmp_record.pop(0)
             self._stack.append(tmp)
             code += f"addi sp, sp, -8\n"
             code += f"sd {tmp}, (sp)\n"
-        if tmp in self._bool_tmp_record:
-            self._bool_tmp_record.remove(tmp)
-        self._bool_tmp_record.append(tmp)
+        if tmp in self._int_tmp_record:
+            self._int_tmp_record.remove(tmp)
+        self._int_tmp_record.append(tmp)
 
         return tmp, code + f"li {tmp}, {int(lliteral.value)}\n"
 
@@ -466,13 +531,13 @@ class CodeGenerator(ASTNodeVisitor):
 
         tmp = self.get_tmp("bool")
         if tmp is None:
-            tmp = self._bool_tmp_record.pop(0)
+            tmp = self._int_tmp_record.pop(0)
             self._stack.append(tmp)
             code += f"addi sp, sp, -8\n"
             code += f"sd {tmp}, (sp)\n"
-        if tmp in self._bool_tmp_record:
-            self._bool_tmp_record.remove(tmp)
-        self._bool_tmp_record.append(tmp)
+        if tmp in self._int_tmp_record:
+            self._int_tmp_record.remove(tmp)
+        self._int_tmp_record.append(tmp)
 
         code += f"fcvt.w.d {tmp}, {reg}\n"
         code += f"snez {tmp}, {tmp}\n"
@@ -480,7 +545,7 @@ class CodeGenerator(ASTNodeVisitor):
         return tmp, code
 
     def visit_GetVector(self, getvector: GetVector):
-        sym = self.get_from_scope(getvector.identifier.name)
+        sym, offset = self.get_from_scope(getvector.identifier.name)
         reg, expr = self.visit(getvector.vector_index)
 
         code = expr
@@ -491,22 +556,37 @@ class CodeGenerator(ASTNodeVisitor):
         else:
             code += f"fcvt.w.d a1, {reg}\n"
             code += f"slli a1, a1, 3\n"
-            code += f"addi a0, sp, {int(sym.location)}\n"
+            code += f"addi a0, sp, {int(sym.location) + offset}\n"
 
         code += f"add a0, a0, a1\n"
         code += f"fld {reg}, (a0)\n"
         return reg, code
 
     def visit_Variable(self, variable: Variable):
-        sym = self.get_from_scope(variable.identifier.name)
-        tmp = self.get_tmp("float")
-        # TODO
+        sym, offset = self.get_from_scope(variable.identifier.name)
+
         code = ""
+        tmp = self.get_tmp("float")
+        if tmp is None:
+            tmp = self._flt_tmp_record.pop(0)
+            self._stack.append(tmp)
+            code += f"addi sp, sp, -8\n"
+            code += f"fsd {tmp}, (sp)\n"
+        if tmp in self._flt_tmp_record:
+            self._flt_tmp_record.remove(tmp)
+        self._flt_tmp_record.append(tmp)
+
         if sym.addressing == "global":
             code += f"la a0, {sym.location}\n"
             code += f"fld {tmp}, (a0)\n"
+        elif sym.addressing == "sp":
+            if sym.type == "param":
+                location = int(sym.location.split("/")[1])
+            else:
+                location = int(sym.location)
+            code += f"fld {tmp}, {location + offset}(sp)\n"
         else:
-            code += f"fld {tmp}, {int(sym.location)}(sp)\n"
+            code += f"fmv.d.x {tmp}, {sym.location.split('/')[0]}\n"
 
         return tmp, code
 
@@ -567,9 +647,32 @@ class CodeGenerator(ASTNodeVisitor):
         return tmp, code
 
     def visit_Call(self, call: Call):
-        # TODO
-        if call.callee.name not in self._funs:
-            self.undeclared_vars.append(call.callee)
+        code = ""
+        tmp = self.get_tmp("float")
+        if tmp is None:
+            tmp = self._flt_tmp_record.pop(0)
+            self._stack.append(tmp)
+            code += f"addi sp, sp, -8\n"
+            code += f"fsd {tmp}, (sp)\n"
+        if tmp in self._flt_tmp_record:
+            self._flt_tmp_record.remove(tmp)
+        self._flt_tmp_record.append(tmp)
+
+        for i, elem in enumerate(call.arguments):
+            if i < len(self._actual_params):
+                self._actual_params[i].addressing = "sp"
+            reg, expr = self.visit(elem)
+            self.free_tmp(reg)
+            code += expr
+            if reg[0] == "f":
+                code += f"fmv.x.d a{i}, {reg}\n"
+            else:
+                code += f"mv a{i}, {reg}\n"
+
+        code += f"call {call.callee.name}\n"
+        code += f"fmv.d.x {tmp}, a0\n"
+
+        return tmp, code
 
     def visit_ErrorStmt(self, errorstmt: ErrorStmt):
         pass
