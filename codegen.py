@@ -187,7 +187,9 @@ class CodeGenerator(ASTNodeVisitor):
                 location = int(sym.location.split("/")[1])
             else:
                 location = int(sym.location)
-            code += f"{instr} {reg}, {location + offset}(sp) # {assign.identifier.name}\n"
+            code += (
+                f"{instr} {reg}, {location + offset}(sp) # {assign.identifier.name}\n"
+            )
 
         return code
 
@@ -255,7 +257,7 @@ class CodeGenerator(ASTNodeVisitor):
             code += f"mv a0, {reg}\n"
         else:
             code += f"fmv.x.d a0, {reg}\n"
-       
+
         """
         reg_load = ""
         print(self._return_reg_load)
@@ -270,7 +272,8 @@ class CodeGenerator(ASTNodeVisitor):
                 reg_load += f"ld {reg}, {8 * i}(sp)\n"
         code += reg_load
         """
-        code += "ld ra, 0(sp)\n" # TODO: Check if ra is always at 0(sp)
+        code += "ld ra, 0(sp)\n"  # TODO: Check if ra is always at 0(sp)
+        code += f"addi sp, sp, {8 * len(self._stack)}\n"
         code += "ret\n"
 
         return code
@@ -349,7 +352,7 @@ class CodeGenerator(ASTNodeVisitor):
         for elem in block.var_decls:
             sym, init = self.visit(elem)
             code += init
-    
+
         stack_init = ""
         if stack_size != 0:
             stack_init += f"addi sp, sp, -{stack_size}\n"
@@ -564,6 +567,31 @@ class CodeGenerator(ASTNodeVisitor):
 
     def visit_Variable(self, variable: Variable):
         sym, offset = self.get_from_scope(variable.identifier.name)
+        if sym.type == "vec":
+            # TODO: Move to the vector register
+            tmp = self.get_tmp("int")
+            code = ""
+            if tmp is None:
+                tmp = self._int_tmp_record.pop(0)
+                self._stack.append(tmp)
+                code += f"addi sp, sp, -8\n"
+                code += f"sd {tmp}, (sp)\n"
+            if tmp in self._int_tmp_record:
+                self._int_tmp_record.remove(tmp)
+            self._int_tmp_record.append(tmp)
+
+            if sym.addressing == "global":
+                code += f"la {tmp}, {sym.location}\n"
+            elif sym.addressing == "sp":
+                if sym.type == "param":
+                    location = int(sym.location.split("/")[1])
+                else:
+                    location = int(sym.location)
+                code += f"addi {tmp}, sp, {location + offset}\n"
+            else:
+                code += f"mv {tmp}, {sym.location.split('/')[0]}\n"
+
+            return tmp, (code, sym.vector_len)
 
         code = ""
         tmp = self.get_tmp("float")
@@ -600,6 +628,15 @@ class CodeGenerator(ASTNodeVisitor):
         lreg, lexpr = self.visit(abinary.left)
         rreg, rexpr = self.visit(abinary.right)
         self.free_tmp(rreg)
+
+        lvlen = 0
+        rvlen = 0
+        if isinstance(lexpr, tuple) and isinstance(rexpr, tuple):
+            lexpr, lvlen = lexpr
+            rexpr, rvlen = rexpr
+            if lvlen != rvlen:
+                print("Error")
+                return
 
         code = lexpr + rexpr
         if self._stack != [] and self._stack[-1] == lreg:

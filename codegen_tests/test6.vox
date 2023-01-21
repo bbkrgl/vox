@@ -1,20 +1,63 @@
 var x = 10;
+var z = 1;
+var xx = [0,2,3,5];
 
 fun y(a, b, c, d)
 {
+	var xx = [1,2,3,4];
+	var i = 0;
+
 	if a > 0 {
 		print a;
 	}
-	print b;
-	print c;
+	//print b;
+	//print c;
 	a = 3;
-	print a;
-	print b;
-	print c;
+	//print a;
+	//print b;
+	//print c;
+
+	for (i = 0; i < 4 and a < 2; i = i + 1) {
+		print xx[i];
+	}
 
 	return x;
 }
 
+fun f(a, b)
+{
+	var x = 100;
+	var i;
+	var xx = [2,3,1,4];
+	if a > 0 {
+		print a;
+	}
+	//print b;
+	a = 3;
+	x = 5;
+	//print a;
+	//print b;
+	
+	for (i = 0; i < 4; i = i + 1) {
+		print xx[i];
+	}
+
+	return 2;
+}
+
+fun fibonnacci(x)
+{
+	if x < 2 {
+		print "Fibo return";
+		return 1;
+	}
+	print "Fibo case";
+	return fibonnacci(x - 1) + fibonnacci(x - 2);
+}
+
 print x;
 x = y(1, 2, 3, 4);
+z = f(0, 3);
 print x;
+
+print fibonnacci(5);
