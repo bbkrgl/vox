@@ -1,63 +1,76 @@
-var x = 10;
-var z = 1;
-var xx = [0,2,3,5];
-
-fun y(a, b, c, d)
-{
-	var xx = [1,2,3,4];
-	var i = 0;
-
-	if a > 0 {
-		print a;
-	}
-	//print b;
-	//print c;
-	a = 3;
-	//print a;
-	//print b;
-	//print c;
-
-	for (i = 0; i < 4 and a < 2; i = i + 1) {
-		print xx[i];
-	}
-
-	return x;
-}
-
-fun f(a, b)
-{
-	var x = 100;
-	var i;
-	var xx = [2,3,1,4];
-	if a > 0 {
-		print a;
-	}
-	//print b;
-	a = 3;
-	x = 5;
-	//print a;
-	//print b;
-	
-	for (i = 0; i < 4; i = i + 1) {
-		print xx[i];
-	}
-
-	return 2;
-}
+var x;
+//var i = 0;
+//var z = 1;
+//var xx = [0,2,3,5];
+//
+//fun y(a, b, c, d)
+//{
+//	var xx = [1,2,3,4];
+//	var i = 0;
+//
+//	if a > 0 {
+//		print a;
+//	} else {
+//		print b;
+//	}
+//	a = 3;
+//	
+//	for (i = 0; i < 4 and a < 2; i = i + 1) {
+//		print xx[i];
+//	}
+//
+//	return x;
+//}
+//
+//fun f(a, b)
+//{
+//	var x = 100;
+//	var i;
+//	var xx = [2,3,1,4];
+//	if a > 0 {
+//		print a;
+//	}
+//	print b;
+//	a = 3;
+//	x = 5;
+//	print a;
+//	print b;
+//	
+//	for (i = 0; i < 4; i = i + 1) {
+//		print xx[i];
+//	}
+//
+//	return 2;
+//}
 
 fun fibonnacci(x)
 {
+	print x;
 	if x < 2 {
-		print "Fibo return";
-		return 1;
+		return x;
 	}
-	print "Fibo case";
 	return fibonnacci(x - 1) + fibonnacci(x - 2);
 }
 
-print x;
-x = y(1, 2, 3, 4);
-z = f(0, 3);
-print x;
+fun fibo_with_var(x)
+{
+	var a = 2;
+	if x < a {
+		var a = 0;
+		return x;
+	}
+	return fibo_with_var(x - 1) + fibo_with_var(x - 2);
+}
 
-print fibonnacci(5);
+//print x;
+//x = y(0, 2, 3, 4);
+//z = f(0, 3);
+//print x;
+//
+//x = fibonnacci(5);
+//print x;
+//print i;
+x = fibonnacci(10);
+print "Result:";
+print x;
+print fibo_with_var(10);
