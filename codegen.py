@@ -202,30 +202,30 @@ class CodeGenerator(ASTNodeVisitor):
 
     def visit_SetVector(self, setvector: SetVector):
         sym, offset = self.get_from_scope(setvector.identifier.name)
-        index_reg, index_expr = self.visit(setvector.vector_index)
         expr_reg, expr = self.visit(setvector.expr)
+        index_reg, index_expr = self.visit(setvector.vector_index)
         self.free_tmp(index_reg)
         self.free_tmp(expr_reg)
 
-        code = index_expr
-        if sym.addressing == "global":
-            code += f"la a0, {sym.location}\n"
-            code += f"fcvt.w.d a1, {index_reg}\n"
-            code += f"slli a1, a1, 3\n"
-            code += f"add a0, a0, a1\n"
-        else:
-            code += f"fcvt.w.d a1, {index_reg}\n"
-            code += f"slli a1, a1, 3\n"
-            code += f"add a0, sp, a1\n"
-            if offset != 0:
-                code += f"addi a0, {offset + 8 * self._spill_offset}\n"
-
-        code += expr
+        code = expr
         if isinstance(setvector.expr, LExpr):
-            code += f"fcvt.d.w fa0, {expr_reg}\n"
-            expr_reg = "fa0"
+            code += f"fcvt.d.w ft0, {expr_reg}\n"
+            expr_reg = "ft0"
 
-        code += f"fsd {expr_reg}, (a0)\n"
+        code += index_expr
+        if sym.addressing == "global":
+            code += f"la s0, {sym.location}\n"
+            code += f"fcvt.w.d s1, {index_reg}\n"
+            code += f"slli s1, s1, 3\n"
+            code += f"add s0, s0, s1\n"
+        else:
+            code += f"fcvt.w.d s1, {index_reg}\n"
+            code += f"slli s1, s1, 3\n"
+            code += f"add s0, sp, s1\n"
+            if offset != 0:
+                code += f"addi s0, {offset + 8 * self._spill_offset}\n"
+
+        code += f"fsd {expr_reg}, (s0)\n"
 
         return code
 
@@ -260,7 +260,7 @@ class CodeGenerator(ASTNodeVisitor):
 
     def visit_Return(self, returnn: Return):
         offset = 0
-        for scope, o in self._symbol_table[:1:-1]:
+        for _, o in self._symbol_table[:1:-1]:
             offset += o
 
         reg, code = self.visit(returnn.expr)
@@ -580,18 +580,22 @@ class CodeGenerator(ASTNodeVisitor):
 
         code = expr
         if sym.addressing == "global":
-            code += f"la a0, {sym.location}\n"
+            code += f"la s0, {sym.location}\n"
             code += f"fcvt.w.d a1, {reg}\n"
-            code += f"slli a1, a1, 3\n"
+            code += f"slli s1, a1, 3\n"
         else:
-            code += f"fcvt.w.d a1, {reg}\n"
-            code += f"slli a1, a1, 3\n"
+            code += f"fcvt.w.d s1, {reg}\n"
+            code += f"slli s1, s1, 3\n"
+            if sym.type == "param":
+                location = int(sym.location.split("/")[1])
+            else:
+                location = int(sym.location)
             code += (
-                f"addi a0, sp, {int(sym.location) + offset + 8 * self._spill_offset}\n"
+                f"addi s0, sp, {int(location) + offset + 8 * self._spill_offset}\n"
             )
 
-        code += f"add a0, a0, a1\n"
-        code += f"fld {reg}, (a0)\n"
+        code += f"add s0, s0, s1\n"
+        code += f"fld {reg}, (s0)\n"
         return reg, code
 
     def visit_Variable(self, variable: Variable):
@@ -768,6 +772,8 @@ class CodeGenerator(ASTNodeVisitor):
                 self._actual_params[i].addressing = "sp"
             reg, expr = self.visit(elem)
             self.free_tmp(reg)
+            if isinstance(expr, tuple):
+                expr, vlen = expr
             code += expr
             if reg[0] == "f":
                 code += f"fmv.x.d a{i}, {reg}\n"
