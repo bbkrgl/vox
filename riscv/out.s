@@ -36,26 +36,26 @@ fsd ft1, 32(sp) # i
 j .L3
 .L2:
 fld ft0, 32(sp)
-la s0, .glob_list
-fcvt.w.d a1, ft0
-slli s1, a1, 3
+fcvt.w.d s1, ft0
+slli s1, s1, 3
+ld s0, 8(sp)
 add s0, s0, s1
 fld ft0, (s0)
 fld ft1, 32(sp)
 li t2, 4607182418800017408 # 1.0
 fmv.d.x ft2, t2
 fadd.d ft1, ft1, ft2
-la s0, .glob_list
-fcvt.w.d a1, ft1
-slli s1, a1, 3
+fcvt.w.d s1, ft1
+slli s1, s1, 3
+ld s0, 8(sp)
 add s0, s0, s1
 fld ft1, (s0)
 flt.d t1, ft1, ft0
 beqz t1, .L1
 fld ft1, 32(sp)
-la s0, .glob_list
-fcvt.w.d a1, ft1
-slli s1, a1, 3
+fcvt.w.d s1, ft1
+slli s1, s1, 3
+ld s0, 8(sp)
 add s0, s0, s1
 fld ft1, (s0)
 fsd ft1, 40(sp) # tmp
@@ -63,13 +63,13 @@ fld ft1, 32(sp)
 li t2, 4607182418800017408 # 1.0
 fmv.d.x ft0, t2
 fadd.d ft1, ft1, ft0
-la s0, .glob_list
-fcvt.w.d a1, ft1
-slli s1, a1, 3
+fcvt.w.d s1, ft1
+slli s1, s1, 3
+ld s0, 8(sp)
 add s0, s0, s1
 fld ft1, (s0)
 fld ft0, 32(sp)
-la s0, .glob_list
+ld s0, 8(sp)
 fcvt.w.d s1, ft0
 slli s1, s1, 3
 add s0, s0, s1
@@ -79,7 +79,7 @@ fld ft0, 32(sp)
 li t2, 4607182418800017408 # 1.0
 fmv.d.x ft2, t2
 fadd.d ft0, ft0, ft2
-la s0, .glob_list
+ld s0, 8(sp)
 fcvt.w.d s1, ft0
 slli s1, s1, 3
 add s0, s0, s1
