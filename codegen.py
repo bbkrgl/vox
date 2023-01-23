@@ -219,9 +219,16 @@ class CodeGenerator(ASTNodeVisitor):
             code += f"slli s1, s1, 3\n"
             code += f"add s0, s0, s1\n"
         else:
+            if sym.type == "param":
+                location = int(sym.location.split("/")[1])
+                code += f"ld s0, {location}(sp)\n"
+                ptr_reg = "s0"
+            else:
+                ptr_reg = "sp"
+
             code += f"fcvt.w.d s1, {index_reg}\n"
             code += f"slli s1, s1, 3\n"
-            code += f"add s0, sp, s1\n"
+            code += f"add s0, {ptr_reg}, s1\n"
             if offset != 0:
                 code += f"addi s0, {offset + 8 * self._spill_offset}\n"
 
@@ -588,11 +595,12 @@ class CodeGenerator(ASTNodeVisitor):
             code += f"slli s1, s1, 3\n"
             if sym.type == "param":
                 location = int(sym.location.split("/")[1])
+                code += f"ld s0, {location}(sp)\n"
             else:
                 location = int(sym.location)
-            code += (
-                f"addi s0, sp, {int(location) + offset + 8 * self._spill_offset}\n"
-            )
+                code += (
+                    f"addi s0, sp, {int(location) + offset + 8 * self._spill_offset}\n"
+                )
 
         code += f"add s0, s0, s1\n"
         code += f"fld {reg}, (s0)\n"

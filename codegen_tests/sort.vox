@@ -12,10 +12,11 @@ fun sort(l, n)
 	}
 
 	for (i = 0; i < n - 1; i = i + 1) {
-		if list[i] > list[i + 1] {
-			tmp = list[i];
-			list[i] = list[i + 1];
-			list[i + 1] = tmp;
+		//print l[i];
+		if l[i] > l[i + 1] {
+			tmp = l[i];
+			l[i] = l[i + 1];
+			l[i + 1] = tmp;
 			count = count + 1;
 		}
 	}
