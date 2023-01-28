@@ -1,4 +1,6 @@
-## Vox Programming Language, for CENG444
+## Vox Programming Language
+A toy programming language inspired by [Lox](https://craftinginterpreters.com/the-lox-language.html), as the project of introductory compiler course [CENG444](https://github.com/bozsahin/ceng444).
+
 Programs can be compiled to RISC-V binary with
 ```
 python voxc.py <src-filename> -o <binary-filename> -c <asm-out-filename>
